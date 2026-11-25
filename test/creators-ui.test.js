@@ -76,8 +76,10 @@ test('the mods database overrides the filename guess', () => {
 test('only a plain 32 hex ETag counts as an MD5', () => {
   const headers = (etag, len) => new Map([['etag', etag], ['content-length', len]]);
   const get = (m) => ({ get: (k) => m.get(k) });
-  assert.deepEqual(L.parseHead(get(headers('"4a758fb6fc6781dd2ce8262de7ecd5a3"', '10'))), { md5: '4a758fb6fc6781dd2ce8262de7ecd5a3', size: 10 });
-  assert.equal(L.parseHead(get(headers('"4a758fb6fc6781dd2ce8262de7ecd5a3-3"', '10'))).md5, null);
+  assert.deepEqual(L.parseHead(get(headers('"4a758fb6fc6781dd2ce8262de7ecd5a3"', '10'))), { md5: '4a758fb6fc6781dd2ce8262de7ecd5a3', etag: null, size: 10 });
+  const multipart = L.parseHead(get(headers('"4a758fb6fc6781dd2ce8262de7ecd5a3-3"', '10')));
+  assert.equal(multipart.md5, null);
+  assert.equal(multipart.etag, '4a758fb6fc6781dd2ce8262de7ecd5a3-3');
 });
 
 test('cached remote data is applied and a fresh cache skips the network', async () => {

@@ -39,6 +39,8 @@ Mod entry:
 }
 ```
 
+Files uploaded in parts (usually the larger ones) have no MD5 in the server ETag. Their entry keeps the ETag in an `etag` field and `md5` is `null`. The same MD5 can appear under different names, so entries are matched by file name first.
+
 To contribute, use **Export hashes** on your file list, add creators, category and image to the generated JSON and open a pull request.
 
 ## Development

@@ -25,6 +25,8 @@ Las bases de creadores y de mods son archivos JSON en [`data/`](data) y se carga
 - [`data/creators.json`](data/creators.json): creadores, patrones de nombre, enlaces oficiales y foto.
 - [`data/mods.json`](data/mods.json): una entrada por archivo, identificada por MD5.
 
+Los archivos subidos por partes (normalmente los mas grandes) no traen MD5 en el ETag del servidor. La entrada guarda el ETag en el campo `etag` y `md5` queda `null`. El mismo MD5 puede aparecer con nombres distintos, por lo que las entradas se buscan primero por nombre de archivo.
+
 Para contribuir, usa **Exportar hashes** en tu lista de archivos, completa creadores, categoria e imagen en el JSON generado y abre un pull request.
 
 ## Desarrollo

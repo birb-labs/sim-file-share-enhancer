@@ -25,6 +25,8 @@ Os bancos de criadores e de mods sao arquivos JSON em [`data/`](data) e sao carr
 - [`data/creators.json`](data/creators.json): criadores, padroes de nome, links oficiais e foto.
 - [`data/mods.json`](data/mods.json): uma entrada por arquivo, identificada pelo MD5.
 
+Arquivos enviados em partes (geralmente os maiores) nao trazem MD5 no ETag do servidor. A entrada guarda o ETag no campo `etag` e `md5` fica `null`. O mesmo MD5 pode aparecer com nomes diferentes, entao as entradas sao localizadas primeiro pelo nome do arquivo.
+
 Para contribuir, use **Exportar hashes** na sua lista de arquivos, complete criadores, categoria e imagem no JSON gerado e abra um pull request.
 
 ## Desenvolvimento
