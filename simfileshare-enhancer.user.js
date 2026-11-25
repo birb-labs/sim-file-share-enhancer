@@ -804,15 +804,68 @@ function onReady(doc, fn) {
   else fn();
 }
 
-function main(win, doc, gm) {
+const LOADING_CSS = `
+html:not([data-sfx-ready]) body { visibility: hidden; }
+#sfx-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: var(--sfx-bg, #f4f6f9);
+  color: var(--sfx-text, #1f2937);
+  font: 14px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  visibility: visible;
+}
+#sfx-loading svg { width: 44px; height: 44px; animation: sfx-spin 0.9s linear infinite; }
+@keyframes sfx-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  #sfx-loading svg { animation: none; }
+}
+`;
+
+const LOADING_MARKUP =
+  '<svg viewBox="0 0 24 24" fill="none" stroke="#07a4dc" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">' +
+  '<circle cx="12" cy="12" r="9" stroke-opacity="0.2"></circle><path d="M21 12a9 9 0 0 0-9-9"></path></svg>' +
+  '<span>Loading</span>';
+
+function showLoading(doc) {
+  if (doc.getElementById('sfx-loading')) return;
+  const overlay = doc.createElement('div');
+  overlay.id = 'sfx-loading';
+  overlay.setAttribute('role', 'status');
+  overlay.innerHTML = LOADING_MARKUP;
+  doc.documentElement.appendChild(overlay);
+}
+
+function markReady(doc) {
+  doc.documentElement.setAttribute('data-sfx-ready', 'true');
+  const overlay = doc.getElementById('sfx-loading');
+  if (overlay) overlay.remove();
+}
+
+function main(win, doc, gm, opts = {}) {
   gm.addStyle(THEME_CSS);
   gm.addStyle(TABLE_CSS);
   gm.addStyle(TOOLBAR_CSS);
   gm.addStyle(ACTIONBAR_CSS);
+  gm.addStyle(LOADING_CSS);
   const theme = initTheme(win, doc, gm);
+  showLoading(doc);
+  const failsafe = win.setTimeout(() => markReady(doc), opts.failsafeMs === undefined ? 3000 : opts.failsafeMs);
   onReady(doc, () => {
-    mountThemeToggle(doc, theme);
-    enhanceFileTable(doc, win);
+    try {
+      mountThemeToggle(doc, theme);
+      enhanceFileTable(doc, win);
+    } catch (error) {
+      win.console.error('Sim File Share Enhancer: enhancement failed', error);
+    } finally {
+      win.clearTimeout(failsafe);
+      markReady(doc);
+    }
   });
 }
 
