@@ -2,6 +2,12 @@
   "name": "simfileshare-enhancer",
   "private": true,
   "version": "2.0.0",
-  "scripts": { "test": "node --test test/" },
-  "devDependencies": { "jsdom": "^26.0.0" }
+  "scripts": {
+    "test": "node --test test/",
+    "e2e": "node e2e/run.js"
+  },
+  "devDependencies": {
+    "jsdom": "^26.0.0",
+    "playwright": "^1.65.1"
+  }
 }
