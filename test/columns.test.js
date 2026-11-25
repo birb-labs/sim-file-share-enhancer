@@ -124,3 +124,16 @@ test('rows with an unexpected shape do not break pages that already have columns
   assert.equal(L.collectRows(t.doc).length, 33);
   assert.equal(t.doc.querySelectorAll('thead th[data-sfx-col="type"]').length, 1);
 });
+
+test('the hearts header keeps a label and an icon next to the sort arrow', async () => {
+  const t = await loadPage();
+  const th = t.doc.querySelector('thead th[data-sfx-col="hearts"]');
+  assert.equal(th.getAttribute('title'), 'Hearts');
+  assert.equal(th.querySelectorAll('svg').length, 2);
+  assert.equal(th.querySelector('.glyphicon'), null);
+});
+
+test('an unknown bracket tag says it comes from the filename', async () => {
+  const t = await loadPage(miniPage(['[Peridot] Shorter University.package']));
+  assert.equal(t.row(0).querySelector('.sfx-tag').getAttribute('title'), 'Tag from the filename, not a verified creator');
+});

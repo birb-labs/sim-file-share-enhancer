@@ -104,3 +104,11 @@ test('a bare uppercase V1 is a style variant, not a version', () => {
   assert.equal(L.parseName('Mod_v2.package').version, '2');
   assert.equal(L.parseName('Mod_V2.6.3.2.package').version, '2.6.3.2');
 });
+
+test('z-prefixed words are not mistaken for load order markers', () => {
+  assert.equal(L.parseName('Zzzap_Sleep.package').title, 'Zzzap Sleep');
+  assert.equal(L.parseName('zzzap_Sleep.package').loadOrder, false);
+  assert.equal(L.parseName('ZZTop_Guitar.package').title, 'ZZ Top Guitar');
+  assert.equal(L.parseName('zzzMod_Core.package').loadOrder, true);
+  assert.equal(L.parseName('ZZ_Lumpinou_x.package').loadOrder, true);
+});

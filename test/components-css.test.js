@@ -77,3 +77,18 @@ test('toolbar inputs are readable: no spinner overlap, normal weight, chip gaps'
   assert.ok(/\.sfx-search input\[type="search"\][^}]*font-weight:\s*400/.test(text));
   assert.ok(/\.sfx-chip\s*\{[^}]*display:\s*inline-flex[^}]*gap:\s*6px/.test(text));
 });
+
+test('the condensed-table padding rule leaves the file list alone', async () => {
+  const text = await css();
+  assert.ok(/\.table-condensed:not\(\.sfx-table\)\s*>\s*tbody\s*>\s*tr\s*>\s*td/.test(text));
+  assert.ok(!/\.table-condensed\s*>\s*tbody\s*>\s*tr\s*>\s*td\s*\{[^}]*padding: 10px 12px/.test(text.replace(/\.table-condensed:not\(\.sfx-table\)[^{]*\{[^}]*\}/g, '')));
+});
+
+test('narrow windows drop columns progressively and let chips shrink', async () => {
+  const text = await css();
+  const media = (px) => new RegExp(`@media \\(max-width: ${px}px\\) \\{([\\s\\S]*?)\\n\\}`).exec(text)[1];
+  assert.ok(media(1199).includes('data-sfx-col="hearts"'));
+  assert.ok(media(991).includes('data-sfx-col="last"') && media(991).includes('data-sfx-col="type"'));
+  assert.ok(media(767).includes('data-sfx-col="added"') && /min-width:\s*440px/.test(media(767)));
+  assert.ok(/\.sfx-creator[^}]*flex:\s*0 1 auto[^}]*max-width/.test(text));
+});

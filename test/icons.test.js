@@ -8,7 +8,7 @@ const doc = () => makeDom('<html><body></body></html>').window.document;
 test('the icon set has the documented names', () => {
   assert.deepEqual(L.ICON_NAMES, [
     'package', 'script', 'log', 'config', 'file', 'folder',
-    'search', 'link', 'download', 'sort', 'copy', 'clear',
+    'search', 'link', 'download', 'sort', 'copy', 'clear', 'heart',
   ]);
 });
 

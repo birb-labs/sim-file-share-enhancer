@@ -65,7 +65,7 @@ test('load order markers do not hide the creator', () => {
 
 test('unconfirmed or generic prefixes never produce a creator', () => {
   for (const f of [
-    'mcdonalds_x.package', 'Apple_Pie.package', 'Foo_Bar.package', 'Yogurt.package', '1.package',
+    'mcdonalds_x.package', 'mc_cas_hair_by_bob.package', 'mc_woohoo_extra_pack.package', 'Apple_Pie.package', 'Foo_Bar.package', 'Yogurt.package', '1.package',
     'woosteru_yuShoes_Mosch Boots.package', 'ATS4_object_health_vitamins_toddlers.package',
     '[ADA]-PurgatoryDress.package', '[missmarymax] snorlax mug.package', 'sej_FOMO_BG_x.package',
     'SAC_Deadly Toddlers -Mod- v2.4.1.package', 'mc_unknownmodule.package', 'Resource.cfg',
@@ -81,4 +81,16 @@ test('pack codes only contain confirmed names', () => {
   assert.equal(L.PACK_CODES.SP01, 'Luxury Party Stuff');
   assert.equal(L.PACK_CODES.GTW, 'Get to Work');
   assert.equal(L.PACK_CODES.HSY, undefined);
+});
+
+test('TURBODRIVER files are not tied to one of its mods', () => {
+  assert.equal(L.matchCreator('TURBODRIVER_WonderfulWhims_Scripts.ts4script').name, 'TURBODRIVER');
+  assert.equal(L.matchCreator('TURBODRIVER_WickedWhims_Tuning.package').id, 'wickedwhims');
+});
+
+test('a creator link is on the same site as its source or documents its own source', () => {
+  for (const c of L.CREATORS) {
+    const sameSite = new URL(c.url).hostname === new URL(c.source).hostname;
+    assert.ok(sameSite || (c.urlSource && c.urlSource.startsWith('https://')), c.id);
+  }
 });

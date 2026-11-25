@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { firefox } = require('playwright');
 const { shouldAbort } = require('./guard.js');
-const { loadCredentials } = require('./credentials.js');
+const { loadCredentials, redact } = require('./credentials.js');
 
 const ROOT = path.join(__dirname, '..', '..');
 const SCRIPT = fs.readFileSync(path.join(__dirname, '..', 'simfileshare-enhancer.user.js'), 'utf8');
@@ -20,8 +20,8 @@ const PAGES = [
   { name: 'profile', path: '/accounts/profile/', fileList: true },
   { name: 'folder', path: '/folders/edit/280190/' },
   { name: 'folders', path: '/accounts/folders/' },
-  { name: 'editinfo', path: '/accounts/editinfo/', outline: true },
-  { name: 'invitecodes', path: '/accounts/invitecodes/', outline: true },
+  { name: 'editinfo', path: '/accounts/editinfo/', outline: true, blur: 'input[type="email"]' },
+  { name: 'invitecodes', path: '/accounts/invitecodes/', outline: true, blur: 'ol code' },
   { name: 'support', path: '/support/' },
   { name: 'faq', path: '/support/faq/', faq: true },
 ];
@@ -46,7 +46,11 @@ const OUTLINE = () => {
       const raw = (el.textContent || '').trim().replace(/\s+/g, ' ');
       text = /[A-Za-z0-9]{16,}/.test(raw) ? ' "<redacted>"' : raw ? ` "${raw.slice(0, 70)}"` : '';
     }
-    const attrs = ['type', 'name', 'href'].map((a) => (el.getAttribute(a) ? ` ${a}=${el.getAttribute(a).slice(0, 40)}` : '')).join('');
+    const attrs = ['type', 'name', 'href'].map((a) => {
+      const v = el.getAttribute(a);
+      if (!v) return '';
+      return ` ${a}=${/[A-Za-z0-9]{16,}/.test(v) ? '<redacted>' : v.slice(0, 40)}`;
+    }).join('');
     lines.push(`${'  '.repeat(depth)}${tag}${id}${cls}${attrs}${text}`);
     Array.from(el.children).forEach((child) => walk(child, depth + 1));
   };
@@ -102,6 +106,7 @@ async function visit(page, spec, scheme, blocked, shots) {
   await page.waitForTimeout(400);
   report(await page.evaluate(() => !document.getElementById('sfx-loading')), label, 'loading overlay removed');
   report(await page.evaluate(() => Boolean(document.documentElement.dataset.sfxTheme)), label, 'theme applied');
+  if (spec.blur) await page.addStyleTag({ content: `${spec.blur} { filter: blur(9px) !important; }` });
   await page.screenshot({ path: path.join(shots, `${spec.name}-${scheme}.png`) });
   if (spec.outline && scheme === 'dark') {
     fs.writeFileSync(path.join(shots, `${spec.name}.outline.txt`), await page.evaluate(OUTLINE));
@@ -137,7 +142,7 @@ async function checkFileList(page, label, blocked) {
   }));
   report(/^\d+ of \d+ files$/.test(filtered.text) && filtered.text.startsWith(`${filtered.visible} of`), label, 'filter updates the count', JSON.stringify(filtered));
   await page.fill('#sfx-search', '');
-  await page.click('#sfx-select-all');
+  await page.click('tbody tr:not([hidden]) td[data-sfx-col="type"]');
   let dialog = null;
   page.once('dialog', async (d) => {
     dialog = d.message();
@@ -145,7 +150,7 @@ async function checkFileList(page, label, blocked) {
   });
   await page.click('#sfx-actionbar input[name="deletefiles"]');
   await page.waitForTimeout(300);
-  report(Boolean(dialog && dialog.includes(`Delete ${total} file`)), label, 'Delete asks for confirmation with the count', String(dialog).slice(0, 80));
+  report(Boolean(dialog && dialog.includes('Delete 1 file?')), label, 'Delete asks for confirmation with the count', String(dialog).slice(0, 80));
   report(blocked.length === before, label, 'no write request was attempted', blocked.slice(before).join(','));
 }
 
@@ -157,8 +162,11 @@ async function checkFaq(page, label) {
   report(await page.evaluate(() => Boolean(document.querySelector('.panel-collapse.in .panel-body'))), label, 'FAQ answer expands');
 }
 
+let secrets = [];
+
 async function main() {
   const creds = loadCredentials(process.env, path.join(ROOT, '.agent_files', '.env'));
+  secrets = [creds.user, creds.pass];
   fs.mkdirSync(SHOTS, { recursive: true });
   const browser = await firefox.launch({ headless: true });
   const blocked = [];
@@ -181,6 +189,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(`e2e aborted: ${error.message}`);
+  console.error(`e2e aborted: ${redact(error.message, secrets)}`);
   process.exit(2);
 });

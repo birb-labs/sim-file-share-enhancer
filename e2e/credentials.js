@@ -24,4 +24,12 @@ function loadCredentials(env = process.env, envFile) {
   return { user, pass };
 }
 
-module.exports = { loadCredentials };
+function redact(text, secrets) {
+  let out = String(text).split('\n')[0];
+  secrets.filter(Boolean).forEach((secret) => {
+    out = out.split(secret).join('***');
+  });
+  return out;
+}
+
+module.exports = { loadCredentials, redact };

@@ -4,11 +4,12 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { shouldAbort } = require('../e2e/guard.js');
-const { loadCredentials } = require('../e2e/credentials.js');
+const { loadCredentials, redact } = require('../e2e/credentials.js');
 
 test('only reads and the site login are allowed through', () => {
   assert.equal(shouldAbort('GET', 'https://simfileshare.net/accounts/profile/'), false);
-  assert.equal(shouldAbort('HEAD', 'https://simfileshare.net/download/1/'), false);
+  assert.equal(shouldAbort('HEAD', 'https://simfileshare.net/filedetails/1/'), false);
+  assert.equal(shouldAbort('HEAD', 'https://simfileshare.net/download/1/'), true);
   assert.equal(shouldAbort('OPTIONS', 'https://simfileshare.net/'), false);
   assert.equal(shouldAbort('POST', 'https://simfileshare.net/accounts/login/'), false);
   assert.equal(shouldAbort('POST', 'https://www.simfileshare.net/accounts/login/'), false);
@@ -49,4 +50,15 @@ test('missing credentials name the variables but never print values', () => {
     assert.ok(error.message.includes('SFS_PASS'));
     assert.ok(!error.message.includes('secret-user'));
   }
+});
+
+test('downloads are blocked even as GET because they change the stats', () => {
+  assert.equal(shouldAbort('GET', 'https://simfileshare.net/download/123/'), true);
+  assert.equal(shouldAbort('GET', 'https://www.simfileshare.net/download/9/?x=1'), true);
+  assert.equal(shouldAbort('GET', 'https://simfileshare.net/filedetails/123/'), false);
+});
+
+test('redact hides secrets everywhere and keeps only the first line', () => {
+  assert.equal(redact('fill("hunter2")\n  - waiting for hunter2', ['hunter2']), 'fill("***")');
+  assert.equal(redact('no secret here', ['', undefined]), 'no secret here');
 });

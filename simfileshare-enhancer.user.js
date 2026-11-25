@@ -331,6 +331,13 @@ html[data-sfx-theme] .sfx-packs {
   color: var(--sfx-muted);
   font-size: 12px;
 }
+html[data-sfx-theme] .sfx-creator {
+  flex: 0 1 auto;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 html[data-sfx-theme] .sfx-creator,
 html[data-sfx-theme] .sfx-tag,
 html[data-sfx-theme] .sfx-meta,
@@ -346,6 +353,7 @@ html[data-sfx-theme] .sfx-flag {
   text-decoration: none;
 }
 html[data-sfx-theme] .sfx-creator { color: var(--sfx-accent); }
+html[data-sfx-theme] .sfx-tag { border-style: dashed; }
 html[data-sfx-theme] .sfx-creator:hover { border-color: var(--sfx-accent); }
 html[data-sfx-theme] .sfx-type { display: inline-flex; align-items: center; gap: 6px; color: var(--sfx-muted); }
 html[data-sfx-theme] .sfx-table td[data-sfx-col="actions"] .btn { padding: 4px 9px; margin-left: 4px; }
@@ -354,11 +362,13 @@ html[data-sfx-theme] .sfx-table th .sfx-icon { margin-left: 4px; opacity: 0.55; 
   html[data-sfx-theme] .sfx-table [data-sfx-col="hearts"] { display: none; }
 }
 @media (max-width: 991px) {
-  html[data-sfx-theme] .sfx-table [data-sfx-col="last"] { display: none; }
+  html[data-sfx-theme] .sfx-table [data-sfx-col="last"],
+  html[data-sfx-theme] .sfx-table [data-sfx-col="type"] { display: none; }
 }
 @media (max-width: 767px) {
   html[data-sfx-theme] .sfx-table-wrap { overflow-x: auto; }
-  html[data-sfx-theme] .sfx-table { min-width: 520px; }
+  html[data-sfx-theme] .sfx-table [data-sfx-col="added"] { display: none; }
+  html[data-sfx-theme] .sfx-table { min-width: 440px; }
 }
 html[data-sfx-theme] .sfx-folders { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
 html[data-sfx-theme] .sfx-folder-chip {
@@ -517,7 +527,7 @@ function renderFileRow(doc, row) {
       title: `Creator: ${info.creator.name}`,
     }, info.creator.name));
   } else if (info.tag) {
-    line.append(h(doc, 'span', { class: 'sfx-tag' }, info.tag));
+    line.append(h(doc, 'span', { class: 'sfx-tag', title: 'Tag from the filename, not a verified creator' }, info.tag));
   }
   if (info.version) line.append(h(doc, 'span', { class: 'sfx-meta' }, `v${info.version}`));
   info.flags.forEach((flag) => line.append(h(doc, 'span', { class: 'sfx-flag' }, flag)));
@@ -805,7 +815,13 @@ function setupSorting(ctx) {
     th.dataset.sfxKey = key;
     th.classList.add('sfx-sortable');
     th.querySelectorAll('.glyphicon').forEach((g) => g.remove());
-    (th.querySelector('a') || th).append(icon(ctx.doc, 'sort'));
+    const target = th.querySelector('a') || th;
+    if (th.dataset.sfxCol === 'hearts') {
+      th.title = 'Hearts';
+      th.setAttribute('aria-label', 'Hearts');
+      target.append(icon(ctx.doc, 'heart'));
+    }
+    target.append(icon(ctx.doc, 'sort'));
   });
   head.addEventListener('click', (e) => {
     const th = e.target.closest('th[data-sfx-key]');
@@ -1075,7 +1091,8 @@ html[data-sfx-theme] input[type="tel"] {
   color: var(--sfx-text);
 }
 html[data-sfx-theme] .table > tbody > tr > th { border-color: var(--sfx-border); color: var(--sfx-text); vertical-align: middle; }
-html[data-sfx-theme] .table-condensed > tbody > tr > th, html[data-sfx-theme] .table-condensed > tbody > tr > td { padding: 10px 12px; }
+html[data-sfx-theme] .table-condensed:not(.sfx-table) > tbody > tr > th,
+html[data-sfx-theme] .table-condensed:not(.sfx-table) > tbody > tr > td { padding: 10px 12px; }
 html[data-sfx-theme] ol > li > code { display: inline-block; padding: 4px 10px; margin: 3px 0; border-radius: 8px; }
 html[data-sfx-theme] code a { color: var(--sfx-accent); text-decoration: none; word-break: break-all; }
 html[data-sfx-theme] code a:hover { text-decoration: underline; }
@@ -1093,8 +1110,8 @@ const CREATORS = [
     source: 'https://lumpinoumods.com', patterns: [/^lumpinou_/i] },
   { id: 'mccc', name: 'MC Command Center (Deaderpool)', url: 'https://deaderpool-mccc.com',
     source: 'https://deaderpool-mccc.com/documentation.html',
-    patterns: [/^mc_(cmd_center|woohoo|tuner|dresser|settings|career|cas|cheats|cleaner|clubs|control|gedcom|lastexception|occult|population|pregnancy)(?![a-z0-9])/i] },
-  { id: 'wickedwhims', name: 'TURBODRIVER (WickedWhims)', url: 'https://turbodriver.itch.io/wickedwhims',
+    patterns: [/^mc_(cmd_center|woohoo|tuner|dresser|settings|career|cas|cheats|cleaner|clubs|control|gedcom|lastexception|occult|population|pregnancy)(?=\.)/i] },
+  { id: 'wickedwhims', name: 'TURBODRIVER', url: 'https://turbodriver.itch.io/wickedwhims',
     source: 'https://turbodriver.itch.io/wickedwhims', patterns: [/^TURBODRIVER_/i] },
   { id: 'lot51', name: 'Lot 51', url: 'https://lot51.cc',
     source: 'https://lot51.cc/core', patterns: [/^lot51_/i] },
@@ -1102,10 +1119,12 @@ const CREATORS = [
     source: 'https://scumbumbomods.com/xml-injector', patterns: [/^Scumbumbo_/i, /^XmlInjector_/i] },
   { id: 'uicheats', keepName: true, name: 'UI Cheats Extension (weerbesu)', url: 'https://direct.modthesims.info/d/558548',
     source: 'https://direct.modthesims.info/d/558548', patterns: [/^UI_Cheats_Extension/i] },
-  { id: 'plumbbuddy', name: 'PlumbBuddy (CodeBleu)', url: 'https://codebleu.itch.io',
+  { id: 'plumbbuddy', name: 'PlumbBuddy (CodeBleu)',
+    url: 'https://forums.ea.com/discussions/the-sims-franchise-discussion-en/free-mod-manager-for-all-four-sims-games-early-version-feedback-welcome/13579279',
     source: 'https://forums.ea.com/discussions/the-sims-franchise-discussion-en/free-mod-manager-for-all-four-sims-games-early-version-feedback-welcome/13579279',
     patterns: [/^PlumbBuddy_/i] },
   { id: 'basemental', keepName: true, name: 'Basemental', url: 'https://basementalcc.com',
+    urlSource: 'https://segmentnext.com/the-sims-4-basemental-drug-mod',
     source: 'https://kotaku.com/modder-makes-6-000-a-month-adding-drugs-to-the-sims-4-1823044123',
     patterns: [/^Basemental /i, /^basementaldrugs/i] },
   { id: 'littlbowbub', name: 'Littlbowbub', url: 'https://musthavemods.com/creator/littlbowbub/',
@@ -1140,7 +1159,7 @@ const PACK_CODES = {
 };
 
 function stripOrderMarkers(name) {
-  return name.replace(/^!+/, '').replace(/^z{2,}[_\- ]*/i, '');
+  return name.replace(/^!+/, '').replace(/^(?:z{2,}|Z{2,})[_\- ]+|^z{2,}(?=[A-Z0-9])/, '');
 }
 
 function matchCreator(filename) {
@@ -1233,6 +1252,7 @@ const ICON_PATHS = {
   sort: '<polyline points="8 9 12 5 16 9"/><polyline points="8 15 12 19 16 15"/>',
   copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>',
   clear: '<line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>',
+  heart: '<path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 0 0-7.1 7.1l1.7 1.7L12 21l7.1-6.6 1.7-1.7a5 5 0 0 0 0-7.1z"/>',
 };
 const ICON_NAMES = Object.keys(ICON_PATHS);
 
@@ -1303,17 +1323,25 @@ function markReady(doc) {
 }
 
 function main(win, doc, gm, opts = {}) {
-  gm.addStyle(THEME_CSS);
-  gm.addStyle(TABLE_CSS);
-  gm.addStyle(TOOLBAR_CSS);
-  gm.addStyle(ACTIONBAR_CSS);
-  gm.addStyle(LOADING_CSS);
-  gm.addStyle(ICON_CSS);
-  gm.addStyle(PAGEHEAD_CSS);
-  gm.addStyle(COMPONENTS_CSS);
-  const theme = initTheme(win, doc, gm);
-  showLoading(doc);
   const failsafe = win.setTimeout(() => markReady(doc), opts.failsafeMs === undefined ? 3000 : opts.failsafeMs);
+  let theme;
+  try {
+    gm.addStyle(THEME_CSS);
+    gm.addStyle(TABLE_CSS);
+    gm.addStyle(TOOLBAR_CSS);
+    gm.addStyle(ACTIONBAR_CSS);
+    gm.addStyle(LOADING_CSS);
+    gm.addStyle(ICON_CSS);
+    gm.addStyle(PAGEHEAD_CSS);
+    gm.addStyle(COMPONENTS_CSS);
+    theme = initTheme(win, doc, gm);
+    showLoading(doc);
+  } catch (error) {
+    win.console.error('Sim File Share Enhancer: setup failed', error);
+    win.clearTimeout(failsafe);
+    markReady(doc);
+    return;
+  }
   onReady(doc, () => {
     try {
       mountThemeToggle(doc, theme);

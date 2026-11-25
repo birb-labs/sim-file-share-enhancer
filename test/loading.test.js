@@ -56,3 +56,14 @@ test('the stylesheet hides the body until ready and honors reduced motion', () =
   assert.ok(css.includes('html:not([data-sfx-ready]) body'));
   assert.ok(css.includes('prefers-reduced-motion'));
 });
+
+test('a failure while setting up styles or theme still reveals the page', () => {
+  const dom = makeDom(PAGE);
+  const reported = [];
+  dom.window.console.error = (...args) => reported.push(args);
+  const gm = { addStyle() { throw new Error('boom'); }, getValue: () => 'system', setValue() {} };
+  assert.doesNotThrow(() => L.main(dom.window, dom.window.document, gm));
+  assert.equal(dom.window.document.documentElement.dataset.sfxReady, 'true');
+  assert.equal(dom.window.document.querySelector('#sfx-loading'), null);
+  assert.equal(reported.length, 1);
+});
