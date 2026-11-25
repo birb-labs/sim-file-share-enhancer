@@ -265,6 +265,241 @@ function mountThemeToggle(doc, theme) {
   nav.appendChild(item);
 }
 
+const TABLE_CSS = `
+html[data-sfx-theme] .sfx-table-wrap { overflow: visible; border: 0; margin-bottom: 24px; }
+html[data-sfx-theme] .sfx-table {
+  table-layout: fixed;
+  width: 100%;
+  margin: 0;
+  border-radius: var(--sfx-radius);
+  box-shadow: var(--sfx-shadow);
+}
+html[data-sfx-theme] .sfx-table tr[hidden] { display: none !important; }
+html[data-sfx-theme] .sfx-table > thead > tr > th {
+  position: sticky;
+  top: var(--sfx-nav-height);
+  z-index: 5;
+  background: var(--sfx-surface-alt);
+  border-bottom: 2px solid var(--sfx-border);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+html[data-sfx-theme] .sfx-table > thead > tr > th a { color: var(--sfx-muted); text-decoration: none; }
+html[data-sfx-theme] .sfx-table > thead > tr > th[aria-sort] a { color: var(--sfx-accent); }
+html[data-sfx-theme] .sfx-table > tbody > tr > td {
+  padding: 6px 8px;
+  vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+html[data-sfx-theme] .sfx-table > tbody > tr { cursor: pointer; user-select: none; }
+html[data-sfx-theme] .sfx-table > tbody > tr:hover > td { background: var(--sfx-hover); }
+html[data-sfx-theme] .sfx-table > tbody > tr.sfx-selected > td { background: var(--sfx-selected); }
+html[data-sfx-theme] .sfx-table th:nth-child(1), html[data-sfx-theme] .sfx-table td:nth-child(1) { width: 40px; text-align: center; }
+html[data-sfx-theme] .sfx-table th:nth-child(3), html[data-sfx-theme] .sfx-table td:nth-child(3) { width: 88px; text-align: right; }
+html[data-sfx-theme] .sfx-table th:nth-child(4), html[data-sfx-theme] .sfx-table td:nth-child(4),
+html[data-sfx-theme] .sfx-table th:nth-child(5), html[data-sfx-theme] .sfx-table td:nth-child(5) { width: 56px; text-align: right; }
+html[data-sfx-theme] .sfx-table th:nth-child(6), html[data-sfx-theme] .sfx-table td:nth-child(6),
+html[data-sfx-theme] .sfx-table th:nth-child(7), html[data-sfx-theme] .sfx-table td:nth-child(7) { width: 156px; }
+html[data-sfx-theme] .sfx-table th:nth-child(8), html[data-sfx-theme] .sfx-table td:nth-child(8) { width: 136px; text-align: right; }
+html[data-sfx-theme] .sfx-table input[type="checkbox"] { width: 16px; height: 16px; margin: 0; cursor: pointer; }
+html[data-sfx-theme] .sfx-ext {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--sfx-surface-alt);
+  border: 1px solid var(--sfx-border);
+  color: var(--sfx-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+html[data-sfx-theme] .sfx-folders { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+html[data-sfx-theme] .sfx-folder-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 1px solid var(--sfx-border);
+  border-radius: 999px;
+  background: var(--sfx-surface);
+  color: var(--sfx-text);
+  text-decoration: none;
+}
+html[data-sfx-theme] .sfx-folder-chip:hover { border-color: var(--sfx-accent); color: var(--sfx-accent); }
+html[data-sfx-theme] .sfx-folder-kind { color: var(--sfx-muted); font-size: 11px; text-transform: uppercase; }
+`;
+
+function cellText(td) {
+  return td ? td.textContent.trim() : '';
+}
+
+function collectRows(doc) {
+  const first = doc.querySelector('input[name="selectedfiles"]');
+  if (!first) return [];
+  return Array.from(first.closest('table').querySelectorAll('tbody tr'))
+    .map((tr) => {
+      const cb = tr.querySelector('input[name="selectedfiles"]');
+      if (!cb) return null;
+      const cells = tr.children;
+      const link = cells[1].querySelector('a');
+      const name = (link || cells[1]).textContent.trim();
+      return {
+        tr,
+        cb,
+        id: cb.value,
+        name,
+        ext: extOf(name),
+        bytes: parseSize(cellText(cells[2])),
+        downloads: parseInt(cellText(cells[3]), 10) || 0,
+        hearts: parseInt(cellText(cells[4]), 10) || 0,
+        added: parseDate(cellText(cells[5])),
+        lastDownload: parseDate(cellText(cells[6])),
+      };
+    })
+    .filter(Boolean);
+}
+
+function isVisibleRow(row) {
+  return !row.tr.hidden;
+}
+
+function getSelected(rows) {
+  return rows.filter((r) => r.cb.checked);
+}
+
+function setAllVisible(rows, checked) {
+  rows.forEach((r) => {
+    if (isVisibleRow(r)) r.cb.checked = checked;
+  });
+}
+
+function refreshSelectionState(ctx) {
+  const visible = ctx.rows.filter(isVisibleRow);
+  const visibleChecked = visible.filter((r) => r.cb.checked).length;
+  ctx.headerCb.checked = visible.length > 0 && visibleChecked === visible.length;
+  ctx.headerCb.indeterminate = visibleChecked > 0 && visibleChecked < visible.length;
+  ctx.rows.forEach((r) => r.tr.classList.toggle('sfx-selected', r.cb.checked));
+  ctx.doc.dispatchEvent(
+    new ctx.win.CustomEvent('sfx:selection', { detail: { count: getSelected(ctx.rows).length } })
+  );
+}
+
+function clearSelection(ctx) {
+  ctx.rows.forEach((r) => {
+    r.cb.checked = false;
+  });
+  ctx.lastRow = null;
+  refreshSelectionState(ctx);
+}
+
+function moveFolderRowsToChips(doc, tbody, wrap) {
+  const chips = [];
+  Array.from(tbody.querySelectorAll('tr')).forEach((tr) => {
+    const link = tr.querySelector('a');
+    if (tr.querySelector('input[name="selectedfiles"]') || !link) return;
+    const strong = tr.querySelector('strong');
+    const chip = doc.createElement('a');
+    chip.className = 'sfx-folder-chip';
+    chip.setAttribute('href', link.getAttribute('href'));
+    const kind = doc.createElement('span');
+    kind.className = 'sfx-folder-kind';
+    kind.textContent = (strong ? strong.textContent : 'Folder').replace(/:\s*$/, '');
+    chip.append(kind, ' ' + link.textContent.trim());
+    chips.push(chip);
+    tr.remove();
+  });
+  if (chips.length === 0) return;
+  const bar = doc.createElement('div');
+  bar.className = 'sfx-folders';
+  bar.append(...chips);
+  wrap.parentNode.insertBefore(bar, wrap);
+}
+
+function addExtensionBadge(doc, row) {
+  if (row.ext === '(none)') return;
+  const link = row.tr.children[1].querySelector('a');
+  if (!link) return;
+  link.title = row.name;
+  const badge = doc.createElement('span');
+  badge.className = 'sfx-ext';
+  badge.textContent = row.ext;
+  link.after(badge);
+}
+
+function measureNavbar(doc) {
+  const nav = doc.querySelector('.navbar-fixed-top, .navbar');
+  const height = nav ? nav.offsetHeight : 0;
+  if (height) doc.documentElement.style.setProperty('--sfx-nav-height', `${height}px`);
+}
+
+function enhanceFileTable(doc, win) {
+  const first = doc.querySelector('input[name="selectedfiles"]');
+  if (!first) return null;
+  const table = first.closest('table');
+  const tbody = first.closest('tbody');
+  const wrap = table.closest('.table-responsive') || table;
+  table.classList.add('sfx-table');
+  wrap.classList.add('sfx-table-wrap');
+  moveFolderRowsToChips(doc, tbody, wrap);
+  measureNavbar(doc);
+
+  const headerCb = doc.createElement('input');
+  headerCb.type = 'checkbox';
+  headerCb.id = 'sfx-select-all';
+  headerCb.title = 'Select or clear all visible files';
+  headerCb.setAttribute('aria-label', 'Select or clear all visible files');
+  const headerCell = table.querySelector('thead th');
+  if (headerCell) {
+    headerCell.textContent = '';
+    headerCell.appendChild(headerCb);
+  }
+
+  const rows = collectRows(doc);
+  rows.forEach((row) => addExtensionBadge(doc, row));
+  const ctx = { doc, win, table, tbody, wrap, rows, headerCb, lastRow: null, touched: false };
+
+  headerCb.addEventListener('change', () => {
+    ctx.touched = true;
+    setAllVisible(ctx.rows, headerCb.checked);
+    refreshSelectionState(ctx);
+  });
+
+  tbody.addEventListener('click', (e) => {
+    const row = ctx.rows.find((r) => r.tr === e.target.closest('tr'));
+    if (!row) return;
+    const onBox = e.target === row.cb;
+    if (!onBox && e.target.closest('a, button, input, label, .btn')) return;
+    ctx.touched = true;
+    const next = onBox ? row.cb.checked : !row.cb.checked;
+    row.cb.checked = next;
+    if (e.shiftKey && ctx.lastRow) {
+      const visible = ctx.rows.filter(isVisibleRow);
+      const from = visible.indexOf(ctx.lastRow);
+      const to = visible.indexOf(row);
+      if (from >= 0 && to >= 0) rangeIndices(from, to).forEach((i) => (visible[i].cb.checked = next));
+    }
+    ctx.lastRow = row;
+    refreshSelectionState(ctx);
+  });
+
+  win.addEventListener('load', () => {
+    if (!ctx.touched) clearSelection(ctx);
+  });
+  win.addEventListener('pageshow', (e) => {
+    if (e.persisted || !ctx.touched) clearSelection(ctx);
+  });
+  clearSelection(ctx);
+  return ctx;
+}
+
 function onReady(doc, fn) {
   if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', fn, { once: true });
   else fn();
@@ -272,16 +507,18 @@ function onReady(doc, fn) {
 
 function main(win, doc, gm) {
   gm.addStyle(THEME_CSS);
+  gm.addStyle(TABLE_CSS);
   const theme = initTheme(win, doc, gm);
   onReady(doc, () => {
     mountThemeToggle(doc, theme);
+    enhanceFileTable(doc, win);
   });
 }
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     parseSize, parseDate, extOf, matchesQuery, matchesFilters, compareRows, rangeIndices,
-    resolveTheme, main,
+    resolveTheme, collectRows, getSelected, setAllVisible, refreshSelectionState, enhanceFileTable, main,
   };
 } else {
   main(window, document, { addStyle: GM_addStyle, getValue: GM_getValue, setValue: GM_setValue });
