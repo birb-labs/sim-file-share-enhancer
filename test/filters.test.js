@@ -15,9 +15,9 @@ test('search filters by name and updates the visible count', async () => {
 
 test('extension chips filter with OR and show their counts', async () => {
   const t = await loadPage();
-  const chip = (ext) => t.doc.querySelector(`.sfx-chip[data-ext="${ext}"]`);
+  const chip = (ext) => t.doc.querySelector(`.sfx-chip[data-type="${ext}"]`);
   assert.ok(chip('package').textContent.includes('29'));
-  assert.ok(chip('ts4script').textContent.includes('2'));
+  assert.ok(chip('script').textContent.includes('2'));
   chip('package').click();
   assert.equal(t.visible(), 29);
   chip('log').click();
@@ -79,18 +79,18 @@ test('invert flips visible rows and never selects hidden ones', async () => {
 test('reset restores every row, the inputs and the chips', async () => {
   const t = await loadPage();
   t.type(t.doc.querySelector('#sfx-search'), 'appetiser');
-  t.doc.querySelector('.sfx-chip[data-ext="package"]').click();
+  t.doc.querySelector('.sfx-chip[data-type="package"]').click();
   t.doc.querySelector('#sfx-never-dl').click();
   t.doc.querySelector('#sfx-clear').click();
   assert.equal(t.visible(), 33);
   assert.equal(t.doc.querySelector('#sfx-search').value, '');
-  assert.equal(t.doc.querySelector('.sfx-chip[data-ext="package"]').getAttribute('aria-pressed'), 'false');
+  assert.equal(t.doc.querySelector('.sfx-chip[data-type="package"]').getAttribute('aria-pressed'), 'false');
   assert.equal(t.doc.querySelector('#sfx-never-dl').getAttribute('aria-pressed'), 'false');
 });
 
 test('sorting by size works both ways and marks aria-sort', async () => {
   const t = await loadPage();
-  const th = t.doc.querySelector('thead th:nth-child(3)');
+  const th = t.doc.querySelector('thead th[data-sfx-col="size"]');
   t.click(th);
   assert.ok(firstName(t).includes('Makefile'));
   assert.equal(th.getAttribute('aria-sort'), 'ascending');
@@ -101,7 +101,7 @@ test('sorting by size works both ways and marks aria-sort', async () => {
 
 test('sorting by last download keeps the empty value last and blocks navigation', async () => {
   const t = await loadPage();
-  const link = t.doc.querySelector('thead th:nth-child(7) a');
+  const link = t.doc.querySelector('thead th[data-sfx-col="last"] a');
   const event = new t.win.MouseEvent('click', { bubbles: true, cancelable: true });
   link.dispatchEvent(event);
   assert.equal(event.defaultPrevented, true);
@@ -115,7 +115,7 @@ test('sorting by last download keeps the empty value last and blocks navigation'
 test('sorting keeps checked rows checked and selection state consistent', async () => {
   const t = await loadPage();
   t.click(t.row(0).children[2]);
-  t.click(t.doc.querySelector('thead th:nth-child(3)'));
+  t.click(t.doc.querySelector('thead th[data-sfx-col="size"]'));
   assert.equal(t.checked(), 1);
   assert.equal(t.doc.querySelectorAll('#filelist tr.sfx-selected').length, 1);
 });

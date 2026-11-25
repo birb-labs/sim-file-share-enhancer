@@ -64,8 +64,8 @@ function matchesQuery(name, query) {
 }
 
 function matchesFilters(row, f) {
-  if (!matchesQuery(row.name, f.query)) return false;
-  if (f.exts.size > 0 && !f.exts.has(row.ext)) return false;
+  if (!matchesQuery(`${row.name} ${row.creator || ''}`, f.query)) return false;
+  if (f.types.size > 0 && !f.types.has(row.type)) return false;
   if (f.neverDownloaded && row.downloads !== 0) return false;
   if (f.minBytes !== null && (row.bytes === null || row.bytes < f.minBytes)) return false;
   if (f.maxBytes !== null && (row.bytes === null || row.bytes > f.maxBytes)) return false;
@@ -80,7 +80,7 @@ function compareRows(a, b, key, dir) {
   if (x === null) return 1;
   if (y === null) return -1;
   const result =
-    key === 'name'
+    typeof x === 'string'
       ? x.localeCompare(y, undefined, { numeric: true, sensitivity: 'base' })
       : x - y;
   return dir === 'desc' ? -result : result;
@@ -300,33 +300,60 @@ html[data-sfx-theme] .sfx-table > tbody > tr > td {
 html[data-sfx-theme] .sfx-table > tbody > tr { cursor: pointer; user-select: none; }
 html[data-sfx-theme] .sfx-table > tbody > tr:hover > td { background: var(--sfx-hover); }
 html[data-sfx-theme] .sfx-table > tbody > tr.sfx-selected > td { background: var(--sfx-selected); }
-html[data-sfx-theme] .sfx-table th:nth-child(1), html[data-sfx-theme] .sfx-table td:nth-child(1) { width: 40px; text-align: center; }
-html[data-sfx-theme] .sfx-table th:nth-child(3), html[data-sfx-theme] .sfx-table td:nth-child(3) { width: 88px; text-align: right; }
-html[data-sfx-theme] .sfx-table th:nth-child(4), html[data-sfx-theme] .sfx-table td:nth-child(4),
-html[data-sfx-theme] .sfx-table th:nth-child(5), html[data-sfx-theme] .sfx-table td:nth-child(5) { width: 56px; text-align: right; }
-html[data-sfx-theme] .sfx-table th:nth-child(6), html[data-sfx-theme] .sfx-table td:nth-child(6),
-html[data-sfx-theme] .sfx-table th:nth-child(7), html[data-sfx-theme] .sfx-table td:nth-child(7) { width: 156px; }
-html[data-sfx-theme] .sfx-table th:nth-child(8), html[data-sfx-theme] .sfx-table td:nth-child(8) { width: 136px; text-align: right; }
+html[data-sfx-theme] .sfx-table [data-sfx-col="check"] { width: 40px; text-align: center; }
+html[data-sfx-theme] .sfx-table [data-sfx-col="type"] { width: 116px; }
+html[data-sfx-theme] .sfx-table [data-sfx-col="size"] { width: 88px; text-align: right; }
+html[data-sfx-theme] .sfx-table [data-sfx-col="dls"],
+html[data-sfx-theme] .sfx-table [data-sfx-col="hearts"] { width: 56px; text-align: right; }
+html[data-sfx-theme] .sfx-table [data-sfx-col="added"],
+html[data-sfx-theme] .sfx-table [data-sfx-col="last"] { width: 156px; }
+html[data-sfx-theme] .sfx-table [data-sfx-col="actions"] { width: 104px; text-align: right; }
 html[data-sfx-theme] .sfx-table input[type="checkbox"] { width: 16px; height: 16px; margin: 0; cursor: pointer; }
-html[data-sfx-theme] .sfx-ext {
-  display: inline-block;
-  margin-left: 8px;
-  padding: 1px 7px;
+html[data-sfx-theme] .sfx-file { display: flex; align-items: center; gap: 10px; min-width: 0; }
+html[data-sfx-theme] .sfx-file-icon { flex: none; color: var(--sfx-muted); font-size: 22px; line-height: 1; }
+html[data-sfx-theme] .sfx-file-main { flex: 1; min-width: 0; }
+html[data-sfx-theme] .sfx-file-line { display: flex; align-items: center; gap: 6px; min-width: 0; }
+html[data-sfx-theme] .sfx-file-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--sfx-text);
+  font-weight: 600;
+}
+html[data-sfx-theme] .sfx-filename,
+html[data-sfx-theme] .sfx-packs {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--sfx-muted);
+  font-size: 12px;
+}
+html[data-sfx-theme] .sfx-creator,
+html[data-sfx-theme] .sfx-tag,
+html[data-sfx-theme] .sfx-meta,
+html[data-sfx-theme] .sfx-flag {
+  flex: none;
+  padding: 0 8px;
+  border: 1px solid var(--sfx-border);
   border-radius: 999px;
   background: var(--sfx-surface-alt);
-  border: 1px solid var(--sfx-border);
   color: var(--sfx-muted);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  vertical-align: middle;
+  font-size: 11px;
+  line-height: 18px;
+  text-decoration: none;
 }
+html[data-sfx-theme] .sfx-creator { color: var(--sfx-accent); }
+html[data-sfx-theme] .sfx-creator:hover { border-color: var(--sfx-accent); }
+html[data-sfx-theme] .sfx-type { display: inline-flex; align-items: center; gap: 6px; color: var(--sfx-muted); }
+html[data-sfx-theme] .sfx-table td[data-sfx-col="actions"] .btn { padding: 4px 9px; margin-left: 4px; }
+html[data-sfx-theme] .sfx-table th .sfx-icon { margin-left: 4px; opacity: 0.55; }
 @media (max-width: 1199px) {
-  html[data-sfx-theme] .sfx-table th:nth-child(5), html[data-sfx-theme] .sfx-table td:nth-child(5) { display: none; }
+  html[data-sfx-theme] .sfx-table [data-sfx-col="hearts"] { display: none; }
 }
 @media (max-width: 991px) {
-  html[data-sfx-theme] .sfx-table th:nth-child(7), html[data-sfx-theme] .sfx-table td:nth-child(7) { display: none; }
+  html[data-sfx-theme] .sfx-table [data-sfx-col="last"] { display: none; }
 }
 @media (max-width: 767px) {
   html[data-sfx-theme] .sfx-table-wrap { overflow-x: auto; }
@@ -352,28 +379,59 @@ function cellText(td) {
   return td ? td.textContent.trim() : '';
 }
 
+const ORIGINAL_COLUMNS = ['check', 'file', 'size', 'dls', 'hearts', 'added', 'last', 'actions'];
+
+function cellOf(tr, key) {
+  return Array.from(tr.children).find((c) => c.dataset.sfxCol === key);
+}
+
+function prepareColumns(table) {
+  if (table.querySelector('[data-sfx-col="type"]')) return;
+  const doc = table.ownerDocument;
+  table.querySelectorAll('thead tr, tbody tr').forEach((tr) => {
+    const isHead = Boolean(tr.closest('thead'));
+    if (!isHead && !tr.querySelector(FILE_BOX)) return;
+    ORIGINAL_COLUMNS.forEach((key, i) => {
+      if (tr.children[i]) tr.children[i].dataset.sfxCol = key;
+    });
+    const file = cellOf(tr, 'file');
+    if (!file) return;
+    const type = doc.createElement(isHead ? 'th' : 'td');
+    type.dataset.sfxCol = 'type';
+    if (isHead) type.textContent = 'Type';
+    file.after(type);
+  });
+}
+
 function collectRows(doc) {
   const first = doc.querySelector(FILE_BOX);
   const table = first && first.closest('table');
   if (!table) return [];
+  prepareColumns(table);
   return Array.from(table.querySelectorAll('tbody tr'))
     .map((tr) => {
       const cb = tr.querySelector(FILE_BOX);
       if (!cb) return null;
-      const cells = tr.children;
-      const link = cells[1].querySelector('a');
-      const name = (link || cells[1]).textContent.trim();
+      const fileCell = cellOf(tr, 'file');
+      const nameEl = fileCell.querySelector('.sfx-filename') || fileCell.querySelector('a') || fileCell;
+      const name = nameEl.textContent.trim();
+      const ext = extOf(name);
+      const info = parseName(name);
       return {
         tr,
         cb,
         id: cb.value,
         name,
-        ext: extOf(name),
-        bytes: parseSize(cellText(cells[2])),
-        downloads: parseInt(cellText(cells[3]), 10) || 0,
-        hearts: parseInt(cellText(cells[4]), 10) || 0,
-        added: parseDate(cellText(cells[5])),
-        lastDownload: parseDate(cellText(cells[6])),
+        ext,
+        type: typeOf(ext).id,
+        title: info.title,
+        creator: info.creator ? info.creator.name : null,
+        info,
+        bytes: parseSize(cellText(cellOf(tr, 'size'))),
+        downloads: parseInt(cellText(cellOf(tr, 'dls')), 10) || 0,
+        hearts: parseInt(cellText(cellOf(tr, 'hearts')), 10) || 0,
+        added: parseDate(cellText(cellOf(tr, 'added'))),
+        lastDownload: parseDate(cellText(cellOf(tr, 'last'))),
       };
     })
     .filter(Boolean);
@@ -432,7 +490,7 @@ function moveFolderRowsToChips(doc, tbody, wrap) {
     const kind = doc.createElement('span');
     kind.className = 'sfx-folder-kind';
     kind.textContent = (strong ? strong.textContent : 'Folder').replace(/:\s*$/, '');
-    chip.append(kind, ' ' + link.textContent.trim());
+    chip.append(icon(doc, 'folder'), kind, ' ' + link.textContent.trim());
     chips.push(chip);
     tr.remove();
   });
@@ -443,15 +501,48 @@ function moveFolderRowsToChips(doc, tbody, wrap) {
   wrap.parentNode.insertBefore(bar, wrap);
 }
 
-function addExtensionBadge(doc, row) {
-  if (row.ext === '(none)') return;
-  const link = row.tr.children[1].querySelector('a');
-  if (!link) return;
+function renderFileRow(doc, row) {
+  const info = row.info;
+  const fileCell = cellOf(row.tr, 'file');
+  const type = typeOf(row.ext);
+  const link = fileCell.querySelector('a') || h(doc, 'a', { href: `/filedetails/${row.id}/` });
+  link.className = 'sfx-file-title';
+  link.textContent = info.title;
   link.title = row.name;
-  const badge = doc.createElement('span');
-  badge.className = 'sfx-ext';
-  badge.textContent = row.ext;
-  link.after(badge);
+  const line = h(doc, 'div', { class: 'sfx-file-line' }, link);
+  if (info.creator) {
+    line.append(h(doc, 'a', {
+      class: 'sfx-creator', href: info.creator.url, target: '_blank', rel: 'noopener noreferrer',
+      title: `Creator: ${info.creator.name}`,
+    }, info.creator.name));
+  } else if (info.tag) {
+    line.append(h(doc, 'span', { class: 'sfx-tag' }, info.tag));
+  }
+  if (info.version) line.append(h(doc, 'span', { class: 'sfx-meta' }, `v${info.version}`));
+  info.flags.forEach((flag) => line.append(h(doc, 'span', { class: 'sfx-flag' }, flag)));
+  const main = h(doc, 'div', { class: 'sfx-file-main' }, line, h(doc, 'span', { class: 'sfx-filename' }, row.name));
+  if (info.packs.length > 0) {
+    const names = info.packs.map((code) => (PACK_CODES[code] ? `${PACK_CODES[code]} (${code})` : code));
+    main.append(h(doc, 'span', { class: 'sfx-packs' }, `May require: ${names.join(', ')}`));
+  }
+  fileCell.textContent = '';
+  fileCell.append(h(doc, 'div', { class: 'sfx-file' }, h(doc, 'span', { class: 'sfx-file-icon' }, icon(doc, type.icon)), main));
+  cellOf(row.tr, 'type').append(h(doc, 'span', { class: 'sfx-type', 'data-type': type.id }, icon(doc, type.icon), type.label));
+}
+
+function iconizeActions(doc, tr) {
+  const cell = cellOf(tr, 'actions');
+  if (!cell) return;
+  cell.querySelectorAll('a').forEach((a) => {
+    const copy = a.querySelector('.glyphicon-link') || (a.getAttribute('onclick') || '').startsWith('copyURL');
+    const download = (a.getAttribute('href') || '').startsWith('/download/');
+    if (!copy && !download) return;
+    a.textContent = '';
+    a.append(icon(doc, copy ? 'link' : 'download'));
+    const label = copy ? 'Copy link' : 'Download';
+    a.setAttribute('aria-label', label);
+    a.title = label;
+  });
 }
 
 function measureNavbar(doc) {
@@ -483,10 +574,13 @@ function enhanceFileTable(doc, win) {
   }
 
   const rows = collectRows(doc);
-  rows.forEach((row) => addExtensionBadge(doc, row));
+  rows.forEach((row) => {
+    renderFileRow(doc, row);
+    iconizeActions(doc, row.tr);
+  });
   const ctx = {
     doc, win, table, tbody, wrap, rows, headerCb,
-    lastRow: null, touched: false, activeExts: new Set(), sort: null, ui: null,
+    lastRow: null, touched: false, activeTypes: new Set(), sort: null, ui: null,
   };
 
   headerCb.addEventListener('change', () => {
@@ -539,7 +633,9 @@ html[data-sfx-theme] .sfx-toolbar {
   border-radius: var(--sfx-radius);
   box-shadow: var(--sfx-shadow);
 }
-html[data-sfx-theme] .sfx-toolbar input[type="search"] { flex: 1 1 260px; min-width: 200px; height: 34px; padding: 4px 12px; }
+html[data-sfx-theme] .sfx-search { position: relative; display: block; flex: 1 1 260px; min-width: 200px; margin: 0; }
+html[data-sfx-theme] .sfx-search .sfx-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--sfx-muted); }
+html[data-sfx-theme] .sfx-search input[type="search"] { width: 100%; height: 34px; padding: 4px 12px 4px 34px; }
 html[data-sfx-theme] .sfx-toolbar input[type="number"] { width: 84px; height: 34px; padding: 4px 8px; }
 html[data-sfx-theme] .sfx-toolbar select { height: 34px; padding: 4px 8px; }
 html[data-sfx-theme] .sfx-group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
@@ -561,9 +657,11 @@ html[data-sfx-theme] .sfx-table > thead > tr > th.sfx-sortable { cursor: pointer
 `;
 
 const SINCE_MS = { '24h': 86400000, '7d': 604800000, '30d': 2592000000 };
-const SORT_COLUMNS = { 1: 'name', 2: 'bytes', 3: 'downloads', 4: 'hearts', 5: 'added', 6: 'lastDownload' };
+const SORT_COLUMNS = {
+  file: 'name', type: 'type', size: 'bytes', dls: 'downloads', hearts: 'hearts', added: 'added', last: 'lastDownload',
+};
 const SORT_FIRST_DIR = {
-  name: 'asc', bytes: 'asc', downloads: 'desc', hearts: 'desc', added: 'desc', lastDownload: 'desc',
+  name: 'asc', type: 'asc', bytes: 'asc', downloads: 'desc', hearts: 'desc', added: 'desc', lastDownload: 'desc',
 };
 
 function megabytesToBytes(value) {
@@ -582,7 +680,7 @@ function currentFilters(ctx) {
   const ui = ctx.ui;
   return {
     query: ui.search.value,
-    exts: ctx.activeExts,
+    types: ctx.activeTypes,
     neverDownloaded: ui.never.getAttribute('aria-pressed') === 'true',
     minBytes: megabytesToBytes(ui.min.value),
     maxBytes: megabytesToBytes(ui.max.value),
@@ -610,7 +708,7 @@ function resetFilters(ctx) {
   ui.max.value = '';
   ui.since.value = '';
   ui.never.setAttribute('aria-pressed', 'false');
-  ctx.activeExts.clear();
+  ctx.activeTypes.clear();
   ui.chips.forEach((chip) => chip.setAttribute('aria-pressed', 'false'));
   applyFilters(ctx);
 }
@@ -618,12 +716,13 @@ function resetFilters(ctx) {
 function buildToolbar(ctx) {
   const doc = ctx.doc;
   const counts = new Map();
-  ctx.rows.forEach((r) => counts.set(r.ext, (counts.get(r.ext) || 0) + 1));
+  ctx.rows.forEach((r) => counts.set(r.type, (counts.get(r.type) || 0) + 1));
+  const typeInfo = (id) => Object.values(FILE_TYPES).concat(OTHER_TYPE).find((t) => t.id === id);
   const chips = Array.from(counts.entries())
     .sort((a, b) => b[1] - a[1])
-    .map(([ext, n]) =>
-      h(doc, 'button', { type: 'button', class: 'sfx-chip', 'data-ext': ext, 'aria-pressed': 'false' },
-        ext, h(doc, 'span', { class: 'sfx-chip-count' }, String(n)))
+    .map(([id, n]) =>
+      h(doc, 'button', { type: 'button', class: 'sfx-chip', 'data-type': id, 'aria-pressed': 'false' },
+        icon(doc, typeInfo(id).icon), typeInfo(id).label, h(doc, 'span', { class: 'sfx-chip-count' }, String(n)))
     );
   const ui = {
     search: h(doc, 'input', { type: 'search', id: 'sfx-search', placeholder: 'Filter by name (use -word to exclude)' }),
@@ -636,13 +735,13 @@ function buildToolbar(ctx) {
       h(doc, 'option', { value: '7d' }, 'Last 7 days'),
       h(doc, 'option', { value: '30d' }, 'Last 30 days')),
     invert: h(doc, 'button', { type: 'button', id: 'sfx-invert', class: 'btn btn-default btn-sm' }, 'Invert selection'),
-    reset: h(doc, 'button', { type: 'button', id: 'sfx-clear', class: 'btn btn-default btn-sm' }, 'Reset filters'),
+    reset: h(doc, 'button', { type: 'button', id: 'sfx-clear', class: 'btn btn-default btn-sm' }, icon(doc, 'clear'), ' Reset filters'),
     count: h(doc, 'span', { id: 'sfx-visible-count', class: 'sfx-count' }),
     chips,
   };
   ctx.ui = ui;
   const toolbar = h(doc, 'div', { id: 'sfx-toolbar', class: 'sfx-toolbar' },
-    ui.search,
+    h(doc, 'label', { class: 'sfx-search' }, icon(doc, 'search'), ui.search),
     h(doc, 'div', { class: 'sfx-group' }, ...chips, ui.never),
     h(doc, 'div', { class: 'sfx-group' }, h(doc, 'span', { class: 'sfx-label' }, 'Size'), ui.min, ui.max, ui.since),
     h(doc, 'div', { class: 'sfx-group' }, ui.invert, ui.reset),
@@ -657,10 +756,10 @@ function buildToolbar(ctx) {
     if (e.target.matches('input, select')) applyFilters(ctx);
   }));
   chips.forEach((chip) => chip.addEventListener('click', () => {
-    const ext = chip.dataset.ext;
-    const on = !ctx.activeExts.has(ext);
-    if (on) ctx.activeExts.add(ext);
-    else ctx.activeExts.delete(ext);
+    const type = chip.dataset.type;
+    const on = !ctx.activeTypes.has(type);
+    if (on) ctx.activeTypes.add(type);
+    else ctx.activeTypes.delete(type);
     chip.setAttribute('aria-pressed', String(on));
     applyFilters(ctx);
   }));
@@ -694,12 +793,13 @@ function sortBy(ctx, key) {
 function setupSorting(ctx) {
   const head = ctx.table.querySelector('thead');
   if (!head) return;
-  const ths = head.querySelectorAll('th');
-  Object.entries(SORT_COLUMNS).forEach(([index, key]) => {
-    const th = ths[index];
-    if (!th) return;
+  head.querySelectorAll('th[data-sfx-col]').forEach((th) => {
+    const key = SORT_COLUMNS[th.dataset.sfxCol];
+    if (!key) return;
     th.dataset.sfxKey = key;
     th.classList.add('sfx-sortable');
+    th.querySelectorAll('.glyphicon').forEach((g) => g.remove());
+    (th.querySelector('a') || th).append(icon(ctx.doc, 'sort'));
   });
   head.addEventListener('click', (e) => {
     const th = e.target.closest('th[data-sfx-key]');
@@ -758,8 +858,9 @@ function buildActionBar(ctx) {
   if (!form.id) form.id = 'sfx-bulk-form';
 
   const count = h(doc, 'span', { class: 'sfx-selected-count' }, '0 selected');
-  const copy = h(doc, 'button', { type: 'button', id: 'sfx-copy-links', class: 'btn btn-default btn-sm' }, 'Copy links');
-  const clear = h(doc, 'button', { type: 'button', id: 'sfx-clear-selection', class: 'btn btn-default btn-sm' }, 'Clear');
+  const copyLabel = h(doc, 'span', {}, 'Copy links');
+  const copy = h(doc, 'button', { type: 'button', id: 'sfx-copy-links', class: 'btn btn-default btn-sm' }, icon(doc, 'copy'), ' ', copyLabel);
+  const clear = h(doc, 'button', { type: 'button', id: 'sfx-clear-selection', class: 'btn btn-default btn-sm' }, icon(doc, 'clear'), ' Clear');
   const bar = h(doc, 'div', { id: 'sfx-actionbar', class: 'sfx-actionbar', hidden: '' }, count, copy, clear);
   [add, del].forEach((button) => {
     if (!button) return;
@@ -781,9 +882,9 @@ function buildActionBar(ctx) {
   copy.addEventListener('click', () => {
     const ids = getSelected(ctx.rows).map((r) => r.id);
     copyText(win, doc, formatLinks(ids)).then(() => {
-      copy.textContent = `Copied ${ids.length}`;
+      copyLabel.textContent = `Copied ${ids.length}`;
       win.setTimeout(() => {
-        copy.textContent = 'Copy links';
+        copyLabel.textContent = 'Copy links';
       }, 1500);
     });
   });

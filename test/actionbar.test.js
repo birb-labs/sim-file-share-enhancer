@@ -105,11 +105,26 @@ test('the delete confirmation lists the selected names and caps the list', async
   t.win.confirm = (message) => (asked.push(message), false);
   t.boxes()[0].click();
   t.boxes()[1].click();
-  const names = [0, 1].map((i) => t.row(i).children[1].querySelector('a').textContent);
+  const names = [0, 1].map((i) => t.row(i).querySelector('.sfx-filename').textContent);
   bar(t).querySelector('input[name="deletefiles"]').click();
   names.forEach((n) => assert.ok(asked[0].includes(n), n));
   t.header().click();
   bar(t).querySelector('input[name="deletefiles"]').click();
   assert.ok(asked[1].includes('and 28 more'), asked[1]);
   assert.ok(asked[1].includes('Delete 33 files?'), asked[1]);
+});
+
+test('the copy button keeps its icon and shows a confirmation label', async () => {
+  const t = await loadPage();
+  Object.defineProperty(t.win.navigator, 'clipboard', {
+    configurable: true,
+    value: { writeText: () => Promise.resolve() },
+  });
+  t.boxes()[0].click();
+  t.boxes()[1].click();
+  const button = t.doc.querySelector('#sfx-copy-links');
+  button.click();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.ok(button.querySelector('svg'));
+  assert.equal(button.textContent.trim(), 'Copied 2');
 });

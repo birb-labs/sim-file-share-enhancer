@@ -101,15 +101,6 @@ test('the table wrapper no longer clips the sticky header', async () => {
   assert.ok(t.doc.querySelector('#filelist').closest('table').classList.contains('sfx-table'));
 });
 
-test('file rows get an extension badge except files without one', async () => {
-  const t = await load();
-  assert.equal(t.row(0).querySelector('.sfx-ext').textContent, 'package');
-  const makefile = Array.from(t.doc.querySelectorAll('#filelist tr')).find((r) =>
-    r.textContent.includes('Makefile')
-  );
-  assert.equal(makefile.querySelector('.sfx-ext'), null);
-});
-
 test('collectRows parses numeric columns and nulls', async () => {
   const t = await load();
   const rows = L.collectRows(t.doc);

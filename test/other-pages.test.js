@@ -25,8 +25,8 @@ test('a page without a navbar still loads without throwing', async () => {
 test('narrow windows hide secondary columns so the filename stays readable', async () => {
   const t = await loadPage();
   const css = t.gm.styles.join('\n');
-  const wide = /@media \(max-width: 1199px\)[^@]*?nth-child\(5\)[^@]*?display: none/.exec(css);
-  const narrow = /@media \(max-width: 991px\)[^@]*?nth-child\(7\)[^@]*?display: none/.exec(css);
+  const wide = /@media \(max-width: 1199px\)[^@]*?data-sfx-col="hearts"[^@]*?display: none/.exec(css);
+  const narrow = /@media \(max-width: 991px\)[^@]*?data-sfx-col="last"[^@]*?display: none/.exec(css);
   const tiny = /@media \(max-width: 767px\)[^@]*?\.sfx-table-wrap[^@]*?overflow-x: auto/.exec(css);
   assert.ok(wide && narrow && tiny);
 });

@@ -42,18 +42,18 @@ test('matchesQuery requires every term and honors minus exclusions', () => {
 });
 
 const row = (o) => ({
-  name: 'a.package', ext: 'package', bytes: 1000, downloads: 0, hearts: 0,
+  name: 'a.package', ext: 'package', type: 'package', bytes: 1000, downloads: 0, hearts: 0,
   added: 1000, lastDownload: null, ...o,
 });
 const filters = (o) => ({
-  query: '', exts: new Set(), neverDownloaded: false,
+  query: '', types: new Set(), neverDownloaded: false,
   minBytes: null, maxBytes: null, since: null, ...o,
 });
 
 test('matchesFilters combines extension, downloads, size and date', () => {
   assert.equal(L.matchesFilters(row({}), filters({})), true);
-  assert.equal(L.matchesFilters(row({}), filters({ exts: new Set(['log']) })), false);
-  assert.equal(L.matchesFilters(row({}), filters({ exts: new Set(['log', 'package']) })), true);
+  assert.equal(L.matchesFilters(row({}), filters({ types: new Set(['log']) })), false);
+  assert.equal(L.matchesFilters(row({}), filters({ types: new Set(['log', 'package']) })), true);
   assert.equal(L.matchesFilters(row({ downloads: 2 }), filters({ neverDownloaded: true })), false);
   assert.equal(L.matchesFilters(row({ downloads: 0 }), filters({ neverDownloaded: true })), true);
   assert.equal(L.matchesFilters(row({ bytes: 500 }), filters({ minBytes: 1000 })), false);
@@ -73,6 +73,18 @@ test('compareRows orders by key and keeps null last in both directions', () => {
   assert.ok(L.compareRows(a, b, 'lastDownload', 'asc') < 0);
   assert.ok(L.compareRows(a, b, 'lastDownload', 'desc') < 0);
   assert.equal(L.compareRows(a, a, 'bytes', 'asc'), 0);
+});
+
+test('matchesFilters also searches the creator name', () => {
+  assert.equal(L.matchesFilters(row({ creator: 'Littlbowbub' }), filters({ query: 'littlbow' })), true);
+  assert.equal(L.matchesFilters(row({ creator: null }), filters({ query: 'littlbow' })), false);
+});
+
+test('compareRows orders text columns such as type alphabetically', () => {
+  const a = row({ type: 'package' });
+  const b = row({ type: 'script' });
+  assert.ok(L.compareRows(a, b, 'type', 'asc') < 0);
+  assert.ok(L.compareRows(a, b, 'type', 'desc') > 0);
 });
 
 test('compareRows sorts names naturally and ignoring case', () => {
