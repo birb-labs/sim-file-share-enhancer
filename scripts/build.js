@@ -18,7 +18,7 @@ build({
       "if (typeof module !== 'undefined' && module.exports) {",
       '  module.exports = __sfx;',
       '} else {',
-      '  __sfx.main(window, document, { addStyle: GM_addStyle, getValue: GM_getValue, setValue: GM_setValue });',
+      '  __sfx.main(window, document, { addStyle: GM_addStyle, getValue: GM_getValue, setValue: GM_setValue, xhr: GM_xmlhttpRequest });',
       '}',
     ].join('\n'),
   },

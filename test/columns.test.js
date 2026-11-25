@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const L = require('../simfileshare-enhancer.user.js');
 const { loadPage } = require('./helpers.js');
 
-const COLS = ['check', 'file', 'type', 'size', 'dls', 'hearts', 'added', 'last', 'actions'];
+const COLS = ['check', 'file', 'type', 'creators', 'size', 'dls', 'hearts', 'added', 'last', 'actions'];
 const rowOf = (t, text) =>
   Array.from(t.doc.querySelectorAll('#filelist tr')).find((r) => r.textContent.includes(text));
 
@@ -39,11 +39,14 @@ test('each file cell shows title, creator and the real filename', async () => {
   assert.equal(first.querySelector('.sfx-file-title').textContent, 'GC Appetiser Biscuits');
   assert.equal(first.querySelector('.sfx-file-title').getAttribute('href').startsWith('/filedetails/'), true);
   assert.equal(first.querySelector('.sfx-filename').textContent, 'LBB_GC_Appetiser_Biscuits.package');
-  assert.equal(first.querySelector('.sfx-creator').textContent, 'Littlbowbub');
-  assert.equal(first.querySelector('.sfx-creator').getAttribute('href'), 'https://musthavemods.com/creator/littlbowbub/');
+  assert.equal(first.querySelector('[data-sfx-col="file"] .sfx-creator'), null);
+  const chip = first.querySelector('[data-sfx-col="creators"] .sfx-creator');
+  assert.equal(chip.textContent, 'Littlbowbub');
+  assert.equal(chip.tagName, 'BUTTON');
   const makefile = rowOf(t, 'Makefile');
   assert.equal(makefile.querySelector('.sfx-file-title').textContent, 'Makefile');
   assert.equal(makefile.querySelector('.sfx-creator'), null);
+  assert.equal(makefile.querySelector('[data-sfx-col="creators"]').children.length, 0);
 });
 
 test('the type cell has an icon and a label', async () => {

@@ -1,0 +1,381 @@
+[
+  {
+    "id": "adeepindigo",
+    "name": "adeepindigo",
+    "patterns": [
+      {
+        "source": "^adeepindigo[_ ]",
+        "flags": "i"
+      }
+    ],
+    "url": "https://adeepindigomods.itch.io",
+    "source": "https://adeepindigomods.itch.io/healthcare-redux",
+    "links": [
+      {
+        "type": "itch",
+        "url": "https://adeepindigomods.itch.io"
+      }
+    ]
+  },
+  {
+    "id": "lumpinou",
+    "name": "Lumpinou",
+    "patterns": [
+      {
+        "source": "^lumpinou_",
+        "flags": "i"
+      }
+    ],
+    "url": "https://lumpinoumods.com",
+    "source": "https://lumpinoumods.com",
+    "links": [
+      {
+        "type": "site",
+        "url": "https://lumpinoumods.com"
+      }
+    ]
+  },
+  {
+    "id": "mccc",
+    "name": "MC Command Center (Deaderpool)",
+    "patterns": [
+      {
+        "source": "^mc_(cmd_center|woohoo|tuner|dresser|settings|career|cas|cheats|cleaner|clubs|control|gedcom|lastexception|occult|population|pregnancy)(?=\\.)",
+        "flags": "i"
+      }
+    ],
+    "url": "https://deaderpool-mccc.com",
+    "source": "https://deaderpool-mccc.com/documentation.html",
+    "links": [
+      {
+        "type": "site",
+        "url": "https://deaderpool-mccc.com"
+      }
+    ]
+  },
+  {
+    "id": "wickedwhims",
+    "name": "TURBODRIVER",
+    "patterns": [
+      {
+        "source": "^TURBODRIVER_",
+        "flags": "i"
+      }
+    ],
+    "url": "https://turbodriver.itch.io/wickedwhims",
+    "source": "https://turbodriver.itch.io/wickedwhims",
+    "links": [
+      {
+        "type": "itch",
+        "url": "https://turbodriver.itch.io/wickedwhims"
+      }
+    ]
+  },
+  {
+    "id": "lot51",
+    "name": "Lot 51",
+    "patterns": [
+      {
+        "source": "^lot51_",
+        "flags": "i"
+      }
+    ],
+    "url": "https://lot51.cc",
+    "source": "https://lot51.cc/core",
+    "links": [
+      {
+        "type": "site",
+        "url": "https://lot51.cc"
+      }
+    ]
+  },
+  {
+    "id": "scumbumbo",
+    "name": "Scumbumbo",
+    "keepName": true,
+    "patterns": [
+      {
+        "source": "^Scumbumbo_",
+        "flags": "i"
+      },
+      {
+        "source": "^XmlInjector_",
+        "flags": "i"
+      }
+    ],
+    "url": "https://scumbumbomods.com",
+    "source": "https://scumbumbomods.com/xml-injector",
+    "links": [
+      {
+        "type": "site",
+        "url": "https://scumbumbomods.com"
+      }
+    ]
+  },
+  {
+    "id": "uicheats",
+    "name": "UI Cheats Extension (weerbesu)",
+    "keepName": true,
+    "patterns": [
+      {
+        "source": "^UI_Cheats_Extension",
+        "flags": "i"
+      }
+    ],
+    "url": "https://direct.modthesims.info/d/558548",
+    "source": "https://direct.modthesims.info/d/558548",
+    "links": [
+      {
+        "type": "other",
+        "url": "https://direct.modthesims.info/d/558548"
+      }
+    ]
+  },
+  {
+    "id": "plumbbuddy",
+    "name": "PlumbBuddy (CodeBleu)",
+    "patterns": [
+      {
+        "source": "^PlumbBuddy_",
+        "flags": "i"
+      }
+    ],
+    "url": "https://forums.ea.com/discussions/the-sims-franchise-discussion-en/free-mod-manager-for-all-four-sims-games-early-version-feedback-welcome/13579279",
+    "source": "https://forums.ea.com/discussions/the-sims-franchise-discussion-en/free-mod-manager-for-all-four-sims-games-early-version-feedback-welcome/13579279",
+    "links": [
+      {
+        "type": "other",
+        "url": "https://forums.ea.com/discussions/the-sims-franchise-discussion-en/free-mod-manager-for-all-four-sims-games-early-version-feedback-welcome/13579279"
+      }
+    ]
+  },
+  {
+    "id": "basemental",
+    "name": "Basemental",
+    "keepName": true,
+    "patterns": [
+      {
+        "source": "^Basemental ",
+        "flags": "i"
+      },
+      {
+        "source": "^basementaldrugs",
+        "flags": "i"
+      }
+    ],
+    "url": "https://basementalcc.com",
+    "source": "https://kotaku.com/modder-makes-6-000-a-month-adding-drugs-to-the-sims-4-1823044123",
+    "urlSource": "https://segmentnext.com/the-sims-4-basemental-drug-mod",
+    "links": [
+      {
+        "type": "site",
+        "url": "https://basementalcc.com"
+      }
+    ]
+  },
+  {
+    "id": "littlbowbub",
+    "name": "Littlbowbub",
+    "patterns": [
+      {
+        "source": "^(LBB|Littlbowbub)_",
+        "flags": "i"
+      }
+    ],
+    "url": "https://musthavemods.com/creator/littlbowbub/",
+    "source": "https://musthavemods.com/creator/littlbowbub/",
+    "links": [
+      {
+        "type": "musthavemods",
+        "url": "https://musthavemods.com/creator/littlbowbub/"
+      },
+      {
+        "type": "patreon",
+        "url": "https://www.patreon.com/littlbowbub"
+      },
+      {
+        "type": "tumblr",
+        "url": "https://littlbowbub.tumblr.com/"
+      }
+    ],
+    "image": "https://h9zcspxlg2hrrozh.public.blob.vercel-storage.com/mods/fudge-market-stall-1769569282770-0.jpg"
+  },
+  {
+    "id": "kijiko",
+    "name": "Kijiko",
+    "patterns": [
+      {
+        "source": "^\\[Kijiko\\]",
+        "flags": "i"
+      }
+    ],
+    "url": "https://kijiko-catfood.com",
+    "source": "https://kijiko-catfood.com/about/",
+    "links": [
+      {
+        "type": "site",
+        "url": "https://kijiko-catfood.com"
+      }
+    ]
+  },
+  {
+    "id": "pandasama",
+    "name": "Pandasama",
+    "patterns": [
+      {
+        "source": "^pandasama_",
+        "flags": "i"
+      }
+    ],
+    "url": "https://musthavemods.com/creator/pandasamacc/",
+    "source": "https://musthavemods.com/creator/pandasamacc/",
+    "links": [
+      {
+        "type": "musthavemods",
+        "url": "https://musthavemods.com/creator/pandasamacc/"
+      }
+    ],
+    "image": "https://h9zcspxlg2hrrozh.public.blob.vercel-storage.com/mods/kids-functional-car-track-1769630363399-0.jpg"
+  },
+  {
+    "id": "sacrificial",
+    "name": "Sacrificial",
+    "patterns": [
+      {
+        "source": "^SAC_(Zombie Apocalypse|Life Tragedies|ExtremeViolence|Extreme Violence)",
+        "flags": "i"
+      },
+      {
+        "source": "^Sacrificial's Mods",
+        "flags": "i"
+      }
+    ],
+    "url": "https://musthavemods.com/creator/sacrificialmods/",
+    "source": "https://musthavemods.com/creator/sacrificialmods/",
+    "links": [
+      {
+        "type": "musthavemods",
+        "url": "https://musthavemods.com/creator/sacrificialmods/"
+      },
+      {
+        "type": "patreon",
+        "url": "https://www.patreon.com/sacrificialmods"
+      }
+    ]
+  },
+  {
+    "id": "apricot-rush",
+    "name": "Apricot Rush",
+    "patterns": [
+      {
+        "source": "^\\[Apricot Rush\\]",
+        "flags": "i"
+      }
+    ],
+    "url": "https://simscommunity.info/2025/12/17/the-sims-4-custom-food-mods/",
+    "source": "https://simscommunity.info/2025/12/17/the-sims-4-custom-food-mods/",
+    "links": [
+      {
+        "type": "other",
+        "url": "https://simscommunity.info/2025/12/17/the-sims-4-custom-food-mods/"
+      }
+    ]
+  },
+  {
+    "id": "ah00b",
+    "name": "aharris00britney (AH00B)",
+    "patterns": [
+      {
+        "source": "^\\[AH00B\\]",
+        "flags": "i"
+      }
+    ],
+    "url": "https://musthavemods.com/creator/aharris00britney/",
+    "source": "https://musthavemods.com/creator/aharris00britney/",
+    "links": [
+      {
+        "type": "musthavemods",
+        "url": "https://musthavemods.com/creator/aharris00britney/"
+      }
+    ],
+    "image": "https://h9zcspxlg2hrrozh.public.blob.vercel-storage.com/mods/uploads/tumblr-c54b0cb034773fbbf55cbb8bfe0188cd-7bd2199e-540-utUXzfThOMDFzbf9hNmMnejt2fquwn.png"
+  },
+  {
+    "id": "axa",
+    "name": "AxA",
+    "patterns": [
+      {
+        "source": "^\\[AxA\\]",
+        "flags": "i"
+      }
+    ],
+    "url": "https://musthavemods.com/creator/aharris00britney/",
+    "source": "https://musthavemods.com/creator/aharris00britney/",
+    "links": [
+      {
+        "type": "musthavemods",
+        "url": "https://musthavemods.com/creator/aharris00britney/"
+      }
+    ],
+    "image": "https://h9zcspxlg2hrrozh.public.blob.vercel-storage.com/mods/uploads/tumblr-c54b0cb034773fbbf55cbb8bfe0188cd-7bd2199e-540-utUXzfThOMDFzbf9hNmMnejt2fquwn.png"
+  },
+  {
+    "id": "luthienrising",
+    "name": "luthienrising",
+    "patterns": [
+      {
+        "source": "^luthienrising_",
+        "flags": "i"
+      }
+    ],
+    "url": "https://www.patreon.com/cw/luthienrising",
+    "source": "https://www.patreon.com/cw/luthienrising",
+    "links": [
+      {
+        "type": "patreon",
+        "url": "https://www.patreon.com/cw/luthienrising"
+      }
+    ]
+  },
+  {
+    "id": "casteru",
+    "name": "casteru",
+    "patterns": [
+      {
+        "source": "^casteru_",
+        "flags": "i"
+      }
+    ],
+    "url": "https://www.patreon.com/casteru/sitemap",
+    "source": "https://www.patreon.com/casteru/sitemap",
+    "links": [
+      {
+        "type": "patreon",
+        "url": "https://www.patreon.com/casteru/sitemap"
+      }
+    ]
+  },
+  {
+    "id": "simandy",
+    "name": "simandy",
+    "patterns": [
+      {
+        "source": "^simandy_",
+        "flags": "i"
+      }
+    ],
+    "url": "https://musthavemods.com/mods/cmim9sb0l0047ox5693ud7tzt/",
+    "source": "https://musthavemods.com/mods/cmim9sb0l0047ox5693ud7tzt/",
+    "links": [
+      {
+        "type": "musthavemods",
+        "url": "https://musthavemods.com/mods/cmim9sb0l0047ox5693ud7tzt/"
+      },
+      {
+        "type": "tumblr",
+        "url": "https://simandy.tumblr.com/"
+      }
+    ],
+    "image": "https://h9zcspxlg2hrrozh.public.blob.vercel-storage.com/mods/betty-boop-hairstyle-1769603954563-0.jpg"
+  }
+]

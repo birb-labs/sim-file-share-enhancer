@@ -65,9 +65,9 @@ test('the chart credit stays visible and the chart is spaced from the dropzone',
   assert.ok(/#highchart[^}]*margin-bottom:\s*12px/.test(text));
 });
 
-test('date columns are wide enough for the full timestamp', async () => {
+test('date columns are narrow because the timestamp wraps in two lines', async () => {
   const text = await css();
-  assert.ok(/\[data-sfx-col="added"\],[^{]*\[data-sfx-col="last"\]\s*\{[^}]*width:\s*176px/.test(text));
+  assert.ok(/\[data-sfx-col="added"\],[^{]*\[data-sfx-col="last"\]\s*\{[^}]*width:\s*104px/.test(text));
 });
 
 test('toolbar inputs are readable: no spinner overlap, normal weight, chip gaps', async () => {

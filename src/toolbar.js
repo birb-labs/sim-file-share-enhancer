@@ -2,6 +2,7 @@ import { matchesFilters, compareRows } from './logic.js';
 import { isVisibleRow, refreshSelectionState } from './table.js';
 import { FILE_TYPES, OTHER_TYPE } from './parse-name.js';
 import { icon } from './icons.js';
+import { collectHashes, downloadJson } from './hashes.js';
 
 export const TOOLBAR_CSS = `
 html[data-sfx-theme] .sfx-toolbar {
@@ -46,10 +47,10 @@ html[data-sfx-theme] .sfx-table > thead > tr > th.sfx-sortable { cursor: pointer
 
 export const SINCE_MS = { '24h': 86400000, '7d': 604800000, '30d': 2592000000 };
 export const SORT_COLUMNS = {
-  file: 'name', type: 'type', size: 'bytes', dls: 'downloads', hearts: 'hearts', added: 'added', last: 'lastDownload',
+  file: 'name', type: 'type', creators: 'creator', size: 'bytes', dls: 'downloads', hearts: 'hearts', added: 'added', last: 'lastDownload',
 };
 export const SORT_FIRST_DIR = {
-  name: 'asc', type: 'asc', bytes: 'asc', downloads: 'desc', hearts: 'desc', added: 'desc', lastDownload: 'desc',
+  name: 'asc', type: 'asc', creator: 'asc', bytes: 'asc', downloads: 'desc', hearts: 'desc', added: 'desc', lastDownload: 'desc',
 };
 
 export function megabytesToBytes(value) {
@@ -69,6 +70,7 @@ export function currentFilters(ctx) {
   return {
     query: ui.search.value,
     types: ctx.activeTypes,
+    creator: ui.creator.value || null,
     neverDownloaded: ui.never.getAttribute('aria-pressed') === 'true',
     minBytes: megabytesToBytes(ui.min.value),
     maxBytes: megabytesToBytes(ui.max.value),
@@ -95,6 +97,7 @@ export function resetFilters(ctx) {
   ui.min.value = '';
   ui.max.value = '';
   ui.since.value = '';
+  ui.creator.value = '';
   ui.never.setAttribute('aria-pressed', 'false');
   ctx.activeTypes.clear();
   ui.chips.forEach((chip) => chip.setAttribute('aria-pressed', 'false'));
@@ -112,7 +115,20 @@ export function buildToolbar(ctx) {
       h(doc, 'button', { type: 'button', class: 'sfx-chip', 'data-type': id, 'aria-pressed': 'false' },
         icon(doc, typeInfo(id).icon), typeInfo(id).label, h(doc, 'span', { class: 'sfx-chip-count' }, String(n)))
     );
+  const creatorCounts = new Map();
+  let unknown = 0;
+  ctx.rows.forEach((r) => {
+    if (r.creators.length === 0) unknown++;
+    r.creators.forEach((c) => creatorCounts.set(c.id, { name: c.name, n: ((creatorCounts.get(c.id) || {}).n || 0) + 1 }));
+  });
+  const creatorSelect = h(doc, 'select', { id: 'sfx-creator-filter', 'aria-label': 'Filter by creator' },
+    h(doc, 'option', { value: '' }, 'All creators'),
+    ...Array.from(creatorCounts.entries())
+      .sort((a, b) => a[1].name.localeCompare(b[1].name, undefined, { sensitivity: 'base' }))
+      .map(([id, c]) => h(doc, 'option', { value: id }, `${c.name} (${c.n})`)),
+    ...(unknown > 0 ? [h(doc, 'option', { value: '__none' }, `No known creator (${unknown})`)] : []));
   const ui = {
+    creator: creatorSelect,
     search: h(doc, 'input', { type: 'search', id: 'sfx-search', placeholder: 'Filter by name (use -word to exclude)' }),
     never: h(doc, 'button', { type: 'button', id: 'sfx-never-dl', class: 'sfx-chip', 'aria-pressed': 'false' }, 'Never downloaded'),
     min: h(doc, 'input', { type: 'number', id: 'sfx-min-size', min: '0', step: 'any', placeholder: 'Min MB' }),
@@ -123,6 +139,7 @@ export function buildToolbar(ctx) {
       h(doc, 'option', { value: '7d' }, 'Last 7 days'),
       h(doc, 'option', { value: '30d' }, 'Last 30 days')),
     invert: h(doc, 'button', { type: 'button', id: 'sfx-invert', class: 'btn btn-default btn-sm' }, 'Invert selection'),
+    hashes: h(doc, 'button', { type: 'button', id: 'sfx-export-hashes', class: 'btn btn-default btn-sm', title: 'Read the MD5 of each visible file from the server (no download) and save a JSON for the mods database' }, icon(doc, 'download'), ' Export hashes'),
     reset: h(doc, 'button', { type: 'button', id: 'sfx-clear', class: 'btn btn-default btn-sm' }, icon(doc, 'clear'), ' Reset filters'),
     count: h(doc, 'span', { id: 'sfx-visible-count', class: 'sfx-count' }),
     chips,
@@ -132,7 +149,8 @@ export function buildToolbar(ctx) {
     h(doc, 'label', { class: 'sfx-search' }, icon(doc, 'search'), ui.search),
     h(doc, 'div', { class: 'sfx-group' }, ...chips, ui.never),
     h(doc, 'div', { class: 'sfx-group' }, h(doc, 'span', { class: 'sfx-label' }, 'Size'), ui.min, ui.max, ui.since),
-    h(doc, 'div', { class: 'sfx-group' }, ui.invert, ui.reset),
+    h(doc, 'div', { class: 'sfx-group' }, ui.creator),
+    h(doc, 'div', { class: 'sfx-group' }, ui.invert, ui.hashes, ui.reset),
     ui.count);
   const anchor = doc.querySelector('.sfx-folders') || ctx.wrap;
   anchor.parentNode.insertBefore(toolbar, anchor);
@@ -156,6 +174,20 @@ export function buildToolbar(ctx) {
     applyFilters(ctx);
   });
   ui.reset.addEventListener('click', () => resetFilters(ctx));
+  ui.hashes.addEventListener('click', async () => {
+    if (ui.hashes.disabled) return;
+    const selected = ctx.rows.filter((r) => r.cb.checked && isVisibleRow(r));
+    const targets = selected.length > 0 ? selected : ctx.rows.filter(isVisibleRow);
+    const label = ui.hashes.lastChild;
+    ui.hashes.disabled = true;
+    const result = await collectHashes(ctx.win, targets, (done, total) => {
+      label.textContent = ` ${done}/${total}`;
+    });
+    downloadJson(ctx.win, doc, result.entries, 'mods-export.json');
+    if (result.skipped.length > 0) ctx.win.console.warn(`Sim File Share Enhancer: ${result.skipped.length} files without a usable MD5`, result.skipped);
+    label.textContent = ` Export hashes`;
+    ui.hashes.disabled = false;
+  });
   ui.invert.addEventListener('click', () => {
     ctx.touched = true;
     ctx.rows.forEach((r) => {

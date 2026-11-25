@@ -2,6 +2,8 @@ import { FILE_BOX, parseSize, parseDate, extOf, rangeIndices } from './logic.js'
 import { h, buildToolbar, setupSorting } from './toolbar.js';
 import { buildActionBar } from './actionbar.js';
 import { PACK_CODES } from './creators.js';
+import { creatorsForFile } from './database.js';
+import { openCreatorPopup } from './creator-popup.js';
 import { typeOf, parseName } from './parse-name.js';
 import { icon } from './icons.js';
 
@@ -45,7 +47,7 @@ html[data-sfx-theme] .sfx-table [data-sfx-col="size"] { width: 88px; text-align:
 html[data-sfx-theme] .sfx-table [data-sfx-col="dls"],
 html[data-sfx-theme] .sfx-table [data-sfx-col="hearts"] { width: 56px; text-align: right; }
 html[data-sfx-theme] .sfx-table [data-sfx-col="added"],
-html[data-sfx-theme] .sfx-table [data-sfx-col="last"] { width: 176px; font-size: 12px; }
+html[data-sfx-theme] .sfx-table [data-sfx-col="last"] { width: 104px; font-size: 12px; white-space: normal; }
 html[data-sfx-theme] .sfx-table [data-sfx-col="actions"] { width: 104px; text-align: right; }
 html[data-sfx-theme] .sfx-table input[type="checkbox"] { width: 16px; height: 16px; margin: 0; cursor: pointer; }
 html[data-sfx-theme] .sfx-file { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -71,11 +73,16 @@ html[data-sfx-theme] .sfx-packs {
 }
 html[data-sfx-theme] .sfx-creator {
   flex: 0 1 auto;
-  max-width: 40%;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: pointer;
 }
+html[data-sfx-theme] .sfx-table [data-sfx-col="creators"] { width: 150px; white-space: normal; }
+html[data-sfx-theme] .sfx-table [data-sfx-col="creators"] .sfx-creator { margin: 1px 4px 1px 0; }
+html[data-sfx-theme] .sfx-date, html[data-sfx-theme] .sfx-time { display: block; line-height: 1.3; }
+html[data-sfx-theme] .sfx-time { color: var(--sfx-muted); }
 html[data-sfx-theme] .sfx-creator,
 html[data-sfx-theme] .sfx-tag,
 html[data-sfx-theme] .sfx-meta,
@@ -125,7 +132,8 @@ html[data-sfx-theme] .sfx-folder-kind { color: var(--sfx-muted); font-size: 11px
 `;
 
 export function cellText(td) {
-  return td ? td.textContent.trim() : '';
+  if (!td) return '';
+  return td.dataset.sfxText || td.textContent.trim();
 }
 
 export const ORIGINAL_COLUMNS = ['check', 'file', 'size', 'dls', 'hearts', 'added', 'last', 'actions'];
@@ -149,6 +157,10 @@ export function prepareColumns(table) {
     type.dataset.sfxCol = 'type';
     if (isHead) type.textContent = 'Type';
     file.after(type);
+    const creators = doc.createElement(isHead ? 'th' : 'td');
+    creators.dataset.sfxCol = 'creators';
+    if (isHead) creators.textContent = 'Creators';
+    type.after(creators);
   });
 }
 
@@ -166,6 +178,9 @@ export function collectRows(doc) {
       const name = nameEl.textContent.trim();
       const ext = extOf(name);
       const info = parseName(name);
+      const bytes = parseSize(cellText(cellOf(tr, 'size')));
+      const found = creatorsForFile(name, bytes);
+      const creators = found.creators;
       return {
         tr,
         cb,
@@ -174,9 +189,12 @@ export function collectRows(doc) {
         ext,
         type: typeOf(ext).id,
         title: info.title,
-        creator: info.creator ? info.creator.name : null,
+        creator: creators.length > 0 ? creators.map((c) => c.name).join(', ') : null,
+        creators,
+        creatorIds: creators.map((c) => c.id),
+        mod: found.mod,
         info,
-        bytes: parseSize(cellText(cellOf(tr, 'size'))),
+        bytes,
         downloads: parseInt(cellText(cellOf(tr, 'dls')), 10) || 0,
         hearts: parseInt(cellText(cellOf(tr, 'hearts')), 10) || 0,
         added: parseDate(cellText(cellOf(tr, 'added'))),
@@ -259,12 +277,7 @@ export function renderFileRow(doc, row) {
   link.textContent = info.title;
   link.title = row.name;
   const line = h(doc, 'div', { class: 'sfx-file-line' }, link);
-  if (info.creator) {
-    line.append(h(doc, 'a', {
-      class: 'sfx-creator', href: info.creator.url, target: '_blank', rel: 'noopener noreferrer',
-      title: `Creator: ${info.creator.name}`,
-    }, info.creator.name));
-  } else if (info.tag) {
+  if (info.tag && row.creators.length === 0) {
     line.append(h(doc, 'span', { class: 'sfx-tag', title: 'Tag from the filename, not a verified creator' }, info.tag));
   }
   if (info.version) line.append(h(doc, 'span', { class: 'sfx-meta' }, `v${info.version}`));
@@ -276,7 +289,30 @@ export function renderFileRow(doc, row) {
   }
   fileCell.textContent = '';
   fileCell.append(h(doc, 'div', { class: 'sfx-file' }, h(doc, 'span', { class: 'sfx-file-icon' }, icon(doc, type.icon)), main));
+  const creatorCell = cellOf(row.tr, 'creators');
+  row.creators.forEach((creator) => {
+    const chip = h(doc, 'button', {
+      type: 'button', class: 'sfx-creator', 'data-creator': creator.id, title: `Official links: ${creator.name}`,
+    }, creator.name);
+    chip.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openCreatorPopup(doc, creator);
+    });
+    creatorCell.append(chip);
+  });
+  ['added', 'last'].forEach((key) => splitDate(doc, cellOf(row.tr, key)));
   cellOf(row.tr, 'type').append(h(doc, 'span', { class: 'sfx-type', 'data-type': type.id }, icon(doc, type.icon), type.label));
+}
+
+export function splitDate(doc, td) {
+  if (!td) return;
+  const text = td.textContent.trim();
+  const cut = text.lastIndexOf(',');
+  td.title = text;
+  td.dataset.sfxText = text;
+  if (cut < 0) return;
+  td.textContent = '';
+  td.append(h(doc, 'span', { class: 'sfx-date' }, text.slice(0, cut)), h(doc, 'span', { class: 'sfx-time' }, text.slice(cut + 1).trim()));
 }
 
 export function iconizeActions(doc, tr) {

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sim File Share Enhancer
 // @namespace    https://simfileshare.net/
-// @version      2.1.0
+// @version      2.2.0
 // @description  Modern theme, filters, sorting and safe bulk selection for Sim File Share.
 // @author       p4tit0
 // @match        https://simfileshare.net/*
@@ -10,4 +10,8 @@
 // @grant        GM_addStyle
 // @grant        GM_getValue
 // @grant        GM_setValue
+// @grant        GM_xmlhttpRequest
+// @connect      raw.githubusercontent.com
+// @updateURL    https://raw.githubusercontent.com/birb-labs/sim-file-share-enhancer/main/simfileshare-enhancer.user.js
+// @downloadURL  https://raw.githubusercontent.com/birb-labs/sim-file-share-enhancer/main/simfileshare-enhancer.user.js
 // ==/UserScript==

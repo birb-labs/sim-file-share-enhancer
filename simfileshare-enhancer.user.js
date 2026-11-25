@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sim File Share Enhancer
 // @namespace    https://simfileshare.net/
-// @version      2.1.0
+// @version      2.2.0
 // @description  Modern theme, filters, sorting and safe bulk selection for Sim File Share.
 // @author       p4tit0
 // @match        https://simfileshare.net/*
@@ -10,6 +10,10 @@
 // @grant        GM_addStyle
 // @grant        GM_getValue
 // @grant        GM_setValue
+// @grant        GM_xmlhttpRequest
+// @connect      raw.githubusercontent.com
+// @updateURL    https://raw.githubusercontent.com/birb-labs/sim-file-share-enhancer/main/simfileshare-enhancer.user.js
+// @downloadURL  https://raw.githubusercontent.com/birb-labs/sim-file-share-enhancer/main/simfileshare-enhancer.user.js
 // ==/UserScript==
 
 'use strict';
@@ -38,9 +42,11 @@ var __sfx = (() => {
     CREATORS: () => CREATORS,
     ICON_NAMES: () => ICON_NAMES,
     PACK_CODES: () => PACK_CODES,
+    applyCachedData: () => applyCachedData,
     buildPageHead: () => buildPageHead,
     collectRows: () => collectRows,
     compareRows: () => compareRows,
+    creatorsForFile: () => creatorsForFile,
     enhanceFileTable: () => enhanceFileTable,
     extOf: () => extOf,
     formatLinks: () => formatLinks,
@@ -48,13 +54,18 @@ var __sfx = (() => {
     icon: () => icon,
     main: () => main,
     matchCreator: () => matchCreator,
+    matchCreators: () => matchCreators,
     matchesFilters: () => matchesFilters,
     matchesQuery: () => matchesQuery,
     parseDate: () => parseDate,
+    parseHead: () => parseHead,
     parseName: () => parseName,
     parseSize: () => parseSize,
     rangeIndices: () => rangeIndices,
+    refreshData: () => refreshData,
     refreshSelectionState: () => refreshSelectionState,
+    registerCreators: () => registerCreators,
+    registerMods: () => registerMods,
     resolveTheme: () => resolveTheme,
     setAllVisible: () => setAllVisible,
     typeOf: () => typeOf
@@ -274,6 +285,10 @@ html[data-sfx-theme] .sfx-theme-toggle:hover { border-color: var(--sfx-accent); 
   function matchesFilters(row, f) {
     if (!matchesQuery(`${row.name} ${row.creator || ""}`, f.query)) return false;
     if (f.types.size > 0 && !f.types.has(row.type)) return false;
+    if (f.creator) {
+      const ids = row.creatorIds || [];
+      if (f.creator === "__none" ? ids.length > 0 : !ids.includes(f.creator)) return false;
+    }
     if (f.neverDownloaded && row.downloads !== 0) return false;
     if (f.minBytes !== null && (row.bytes === null || row.bytes < f.minBytes)) return false;
     if (f.maxBytes !== null && (row.bytes === null || row.bytes > f.maxBytes)) return false;
@@ -297,146 +312,405 @@ html[data-sfx-theme] .sfx-theme-toggle:hover { border-color: var(--sfx-accent); 
     return out;
   }
 
-  // src/creators.js
-  var CREATORS = [
+  // data/creators.json
+  var creators_default = [
     {
       id: "adeepindigo",
       name: "adeepindigo",
+      patterns: [
+        {
+          source: "^adeepindigo[_ ]",
+          flags: "i"
+        }
+      ],
       url: "https://adeepindigomods.itch.io",
       source: "https://adeepindigomods.itch.io/healthcare-redux",
-      patterns: [/^adeepindigo[_ ]/i]
+      links: [
+        {
+          type: "itch",
+          url: "https://adeepindigomods.itch.io"
+        }
+      ]
     },
     {
       id: "lumpinou",
       name: "Lumpinou",
+      patterns: [
+        {
+          source: "^lumpinou_",
+          flags: "i"
+        }
+      ],
       url: "https://lumpinoumods.com",
       source: "https://lumpinoumods.com",
-      patterns: [/^lumpinou_/i]
+      links: [
+        {
+          type: "site",
+          url: "https://lumpinoumods.com"
+        }
+      ]
     },
     {
       id: "mccc",
       name: "MC Command Center (Deaderpool)",
+      patterns: [
+        {
+          source: "^mc_(cmd_center|woohoo|tuner|dresser|settings|career|cas|cheats|cleaner|clubs|control|gedcom|lastexception|occult|population|pregnancy)(?=\\.)",
+          flags: "i"
+        }
+      ],
       url: "https://deaderpool-mccc.com",
       source: "https://deaderpool-mccc.com/documentation.html",
-      patterns: [/^mc_(cmd_center|woohoo|tuner|dresser|settings|career|cas|cheats|cleaner|clubs|control|gedcom|lastexception|occult|population|pregnancy)(?=\.)/i]
+      links: [
+        {
+          type: "site",
+          url: "https://deaderpool-mccc.com"
+        }
+      ]
     },
     {
       id: "wickedwhims",
       name: "TURBODRIVER",
+      patterns: [
+        {
+          source: "^TURBODRIVER_",
+          flags: "i"
+        }
+      ],
       url: "https://turbodriver.itch.io/wickedwhims",
       source: "https://turbodriver.itch.io/wickedwhims",
-      patterns: [/^TURBODRIVER_/i]
+      links: [
+        {
+          type: "itch",
+          url: "https://turbodriver.itch.io/wickedwhims"
+        }
+      ]
     },
     {
       id: "lot51",
       name: "Lot 51",
+      patterns: [
+        {
+          source: "^lot51_",
+          flags: "i"
+        }
+      ],
       url: "https://lot51.cc",
       source: "https://lot51.cc/core",
-      patterns: [/^lot51_/i]
+      links: [
+        {
+          type: "site",
+          url: "https://lot51.cc"
+        }
+      ]
     },
     {
       id: "scumbumbo",
-      keepName: true,
       name: "Scumbumbo",
+      keepName: true,
+      patterns: [
+        {
+          source: "^Scumbumbo_",
+          flags: "i"
+        },
+        {
+          source: "^XmlInjector_",
+          flags: "i"
+        }
+      ],
       url: "https://scumbumbomods.com",
       source: "https://scumbumbomods.com/xml-injector",
-      patterns: [/^Scumbumbo_/i, /^XmlInjector_/i]
+      links: [
+        {
+          type: "site",
+          url: "https://scumbumbomods.com"
+        }
+      ]
     },
     {
       id: "uicheats",
-      keepName: true,
       name: "UI Cheats Extension (weerbesu)",
+      keepName: true,
+      patterns: [
+        {
+          source: "^UI_Cheats_Extension",
+          flags: "i"
+        }
+      ],
       url: "https://direct.modthesims.info/d/558548",
       source: "https://direct.modthesims.info/d/558548",
-      patterns: [/^UI_Cheats_Extension/i]
+      links: [
+        {
+          type: "other",
+          url: "https://direct.modthesims.info/d/558548"
+        }
+      ]
     },
     {
       id: "plumbbuddy",
       name: "PlumbBuddy (CodeBleu)",
+      patterns: [
+        {
+          source: "^PlumbBuddy_",
+          flags: "i"
+        }
+      ],
       url: "https://forums.ea.com/discussions/the-sims-franchise-discussion-en/free-mod-manager-for-all-four-sims-games-early-version-feedback-welcome/13579279",
       source: "https://forums.ea.com/discussions/the-sims-franchise-discussion-en/free-mod-manager-for-all-four-sims-games-early-version-feedback-welcome/13579279",
-      patterns: [/^PlumbBuddy_/i]
+      links: [
+        {
+          type: "other",
+          url: "https://forums.ea.com/discussions/the-sims-franchise-discussion-en/free-mod-manager-for-all-four-sims-games-early-version-feedback-welcome/13579279"
+        }
+      ]
     },
     {
       id: "basemental",
-      keepName: true,
       name: "Basemental",
+      keepName: true,
+      patterns: [
+        {
+          source: "^Basemental ",
+          flags: "i"
+        },
+        {
+          source: "^basementaldrugs",
+          flags: "i"
+        }
+      ],
       url: "https://basementalcc.com",
-      urlSource: "https://segmentnext.com/the-sims-4-basemental-drug-mod",
       source: "https://kotaku.com/modder-makes-6-000-a-month-adding-drugs-to-the-sims-4-1823044123",
-      patterns: [/^Basemental /i, /^basementaldrugs/i]
+      urlSource: "https://segmentnext.com/the-sims-4-basemental-drug-mod",
+      links: [
+        {
+          type: "site",
+          url: "https://basementalcc.com"
+        }
+      ]
     },
     {
       id: "littlbowbub",
       name: "Littlbowbub",
+      patterns: [
+        {
+          source: "^(LBB|Littlbowbub)_",
+          flags: "i"
+        }
+      ],
       url: "https://musthavemods.com/creator/littlbowbub/",
       source: "https://musthavemods.com/creator/littlbowbub/",
-      patterns: [/^(LBB|Littlbowbub)_/i]
+      links: [
+        {
+          type: "musthavemods",
+          url: "https://musthavemods.com/creator/littlbowbub/"
+        },
+        {
+          type: "patreon",
+          url: "https://www.patreon.com/littlbowbub"
+        },
+        {
+          type: "tumblr",
+          url: "https://littlbowbub.tumblr.com/"
+        }
+      ],
+      image: "https://h9zcspxlg2hrrozh.public.blob.vercel-storage.com/mods/fudge-market-stall-1769569282770-0.jpg"
     },
     {
       id: "kijiko",
       name: "Kijiko",
+      patterns: [
+        {
+          source: "^\\[Kijiko\\]",
+          flags: "i"
+        }
+      ],
       url: "https://kijiko-catfood.com",
       source: "https://kijiko-catfood.com/about/",
-      patterns: [/^\[Kijiko\]/i]
+      links: [
+        {
+          type: "site",
+          url: "https://kijiko-catfood.com"
+        }
+      ]
     },
     {
       id: "pandasama",
       name: "Pandasama",
+      patterns: [
+        {
+          source: "^pandasama_",
+          flags: "i"
+        }
+      ],
       url: "https://musthavemods.com/creator/pandasamacc/",
       source: "https://musthavemods.com/creator/pandasamacc/",
-      patterns: [/^pandasama_/i]
+      links: [
+        {
+          type: "musthavemods",
+          url: "https://musthavemods.com/creator/pandasamacc/"
+        }
+      ],
+      image: "https://h9zcspxlg2hrrozh.public.blob.vercel-storage.com/mods/kids-functional-car-track-1769630363399-0.jpg"
     },
     {
       id: "sacrificial",
       name: "Sacrificial",
+      patterns: [
+        {
+          source: "^SAC_(Zombie Apocalypse|Life Tragedies|ExtremeViolence|Extreme Violence)",
+          flags: "i"
+        },
+        {
+          source: "^Sacrificial's Mods",
+          flags: "i"
+        }
+      ],
       url: "https://musthavemods.com/creator/sacrificialmods/",
       source: "https://musthavemods.com/creator/sacrificialmods/",
-      patterns: [/^SAC_(Zombie Apocalypse|Life Tragedies|ExtremeViolence|Extreme Violence)/i, /^Sacrificial's Mods/i]
+      links: [
+        {
+          type: "musthavemods",
+          url: "https://musthavemods.com/creator/sacrificialmods/"
+        },
+        {
+          type: "patreon",
+          url: "https://www.patreon.com/sacrificialmods"
+        }
+      ]
     },
     {
       id: "apricot-rush",
       name: "Apricot Rush",
+      patterns: [
+        {
+          source: "^\\[Apricot Rush\\]",
+          flags: "i"
+        }
+      ],
       url: "https://simscommunity.info/2025/12/17/the-sims-4-custom-food-mods/",
       source: "https://simscommunity.info/2025/12/17/the-sims-4-custom-food-mods/",
-      patterns: [/^\[Apricot Rush\]/i]
+      links: [
+        {
+          type: "other",
+          url: "https://simscommunity.info/2025/12/17/the-sims-4-custom-food-mods/"
+        }
+      ]
     },
     {
       id: "ah00b",
       name: "aharris00britney (AH00B)",
+      patterns: [
+        {
+          source: "^\\[AH00B\\]",
+          flags: "i"
+        }
+      ],
       url: "https://musthavemods.com/creator/aharris00britney/",
       source: "https://musthavemods.com/creator/aharris00britney/",
-      patterns: [/^\[AH00B\]/i]
+      links: [
+        {
+          type: "musthavemods",
+          url: "https://musthavemods.com/creator/aharris00britney/"
+        }
+      ],
+      image: "https://h9zcspxlg2hrrozh.public.blob.vercel-storage.com/mods/uploads/tumblr-c54b0cb034773fbbf55cbb8bfe0188cd-7bd2199e-540-utUXzfThOMDFzbf9hNmMnejt2fquwn.png"
     },
     {
       id: "axa",
       name: "AxA",
+      patterns: [
+        {
+          source: "^\\[AxA\\]",
+          flags: "i"
+        }
+      ],
       url: "https://musthavemods.com/creator/aharris00britney/",
       source: "https://musthavemods.com/creator/aharris00britney/",
-      patterns: [/^\[AxA\]/i]
+      links: [
+        {
+          type: "musthavemods",
+          url: "https://musthavemods.com/creator/aharris00britney/"
+        }
+      ],
+      image: "https://h9zcspxlg2hrrozh.public.blob.vercel-storage.com/mods/uploads/tumblr-c54b0cb034773fbbf55cbb8bfe0188cd-7bd2199e-540-utUXzfThOMDFzbf9hNmMnejt2fquwn.png"
     },
     {
       id: "luthienrising",
       name: "luthienrising",
+      patterns: [
+        {
+          source: "^luthienrising_",
+          flags: "i"
+        }
+      ],
       url: "https://www.patreon.com/cw/luthienrising",
       source: "https://www.patreon.com/cw/luthienrising",
-      patterns: [/^luthienrising_/i]
+      links: [
+        {
+          type: "patreon",
+          url: "https://www.patreon.com/cw/luthienrising"
+        }
+      ]
     },
     {
       id: "casteru",
       name: "casteru",
+      patterns: [
+        {
+          source: "^casteru_",
+          flags: "i"
+        }
+      ],
       url: "https://www.patreon.com/casteru/sitemap",
       source: "https://www.patreon.com/casteru/sitemap",
-      patterns: [/^casteru_/i]
+      links: [
+        {
+          type: "patreon",
+          url: "https://www.patreon.com/casteru/sitemap"
+        }
+      ]
     },
     {
       id: "simandy",
       name: "simandy",
+      patterns: [
+        {
+          source: "^simandy_",
+          flags: "i"
+        }
+      ],
       url: "https://musthavemods.com/mods/cmim9sb0l0047ox5693ud7tzt/",
       source: "https://musthavemods.com/mods/cmim9sb0l0047ox5693ud7tzt/",
-      patterns: [/^simandy_/i]
+      links: [
+        {
+          type: "musthavemods",
+          url: "https://musthavemods.com/mods/cmim9sb0l0047ox5693ud7tzt/"
+        },
+        {
+          type: "tumblr",
+          url: "https://simandy.tumblr.com/"
+        }
+      ],
+      image: "https://h9zcspxlg2hrrozh.public.blob.vercel-storage.com/mods/betty-boop-hairstyle-1769603954563-0.jpg"
     }
   ];
+
+  // src/creators.js
+  var LINK_TYPES = ["patreon", "tumblr", "site", "itch", "kofi", "musthavemods", "other"];
+  function hydrate(entry) {
+    const links = Array.isArray(entry.links) && entry.links.length > 0 ? entry.links : entry.url ? [{ type: "site", url: entry.url }] : [];
+    return {
+      ...entry,
+      url: entry.url || links[0] && links[0].url,
+      links,
+      patterns: (entry.patterns || []).map((p) => p instanceof RegExp ? p : new RegExp(p.source, p.flags))
+    };
+  }
+  var CREATORS = creators_default.map(hydrate);
+  function registerCreators(list) {
+    if (!Array.isArray(list) || list.length === 0) return;
+    CREATORS.splice(0, CREATORS.length, ...list.filter((c) => c && c.id && c.name).map(hydrate));
+  }
   var PACK_CODES = {
     EP01: "Get to Work",
     EP02: "Get Together",
@@ -447,9 +721,12 @@ html[data-sfx-theme] .sfx-theme-toggle:hover { border-color: var(--sfx-accent); 
   function stripOrderMarkers(name) {
     return name.replace(/^!+/, "").replace(/^(?:z{2,}|Z{2,})[_\- ]+|^z{2,}(?=[A-Z0-9])/, "");
   }
-  function matchCreator(filename) {
+  function matchCreators(filename) {
     const base = stripOrderMarkers(filename);
-    const hit = CREATORS.find((c) => c.patterns.some((p) => p.test(base)));
+    return CREATORS.filter((c) => c.patterns.some((p) => p.test(base)));
+  }
+  function matchCreator(filename) {
+    const hit = matchCreators(filename)[0];
     return hit ? { id: hit.id, name: hit.name, url: hit.url } : null;
   }
 
@@ -550,6 +827,59 @@ html[data-sfx-theme] .sfx-theme-toggle:hover { border-color: var(--sfx-accent); 
     return { creator, tag, title: title || name, version, flags, packs, loadOrder };
   }
 
+  // src/hashes.js
+  var MD5 = /^[0-9a-f]{32}$/i;
+  function parseHead(headers) {
+    const tag = (headers.get("etag") || "").replace(/^W\//, "").replace(/"/g, "");
+    const size = parseInt(headers.get("content-length"), 10);
+    return { md5: MD5.test(tag) ? tag.toLowerCase() : null, size: Number.isNaN(size) ? null : size };
+  }
+  function buildEntry(row, head) {
+    return {
+      md5: head.md5,
+      name: row.name,
+      size: head.size,
+      creators: matchCreators(row.name).map((c) => c.id),
+      category: null,
+      tags: [],
+      image: null,
+      type: typeOf(row.ext).id
+    };
+  }
+  async function collectHashes(win, rows, onProgress, concurrency = 4) {
+    const entries = [];
+    const skipped = [];
+    let next = 0;
+    let done = 0;
+    async function worker() {
+      while (next < rows.length) {
+        const row = rows[next++];
+        try {
+          const res = await win.fetch(`/download/${row.id}/`, { method: "HEAD", credentials: "same-origin" });
+          const head = res.ok ? parseHead(res.headers) : { md5: null, size: null };
+          if (head.md5) entries.push(buildEntry(row, head));
+          else skipped.push(row.name);
+        } catch {
+          skipped.push(row.name);
+        }
+        onProgress(++done, rows.length);
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(concurrency, rows.length) }, worker));
+    entries.sort((a, b) => a.name.localeCompare(b.name));
+    return { entries, skipped };
+  }
+  function downloadJson(win, doc, data, filename) {
+    const url = win.URL.createObjectURL(new win.Blob([JSON.stringify(data, null, 2) + "\n"], { type: "application/json" }));
+    const a = doc.createElement("a");
+    a.href = url;
+    a.download = filename;
+    doc.body.appendChild(a);
+    a.click();
+    a.remove();
+    win.setTimeout(() => win.URL.revokeObjectURL(url), 1e3);
+  }
+
   // src/toolbar.js
   var TOOLBAR_CSS = `
 html[data-sfx-theme] .sfx-toolbar {
@@ -595,6 +925,7 @@ html[data-sfx-theme] .sfx-table > thead > tr > th.sfx-sortable { cursor: pointer
   var SORT_COLUMNS = {
     file: "name",
     type: "type",
+    creators: "creator",
     size: "bytes",
     dls: "downloads",
     hearts: "hearts",
@@ -604,6 +935,7 @@ html[data-sfx-theme] .sfx-table > thead > tr > th.sfx-sortable { cursor: pointer
   var SORT_FIRST_DIR = {
     name: "asc",
     type: "asc",
+    creator: "asc",
     bytes: "asc",
     downloads: "desc",
     hearts: "desc",
@@ -625,6 +957,7 @@ html[data-sfx-theme] .sfx-table > thead > tr > th.sfx-sortable { cursor: pointer
     return {
       query: ui.search.value,
       types: ctx.activeTypes,
+      creator: ui.creator.value || null,
       neverDownloaded: ui.never.getAttribute("aria-pressed") === "true",
       minBytes: megabytesToBytes(ui.min.value),
       maxBytes: megabytesToBytes(ui.max.value),
@@ -649,6 +982,7 @@ html[data-sfx-theme] .sfx-table > thead > tr > th.sfx-sortable { cursor: pointer
     ui.min.value = "";
     ui.max.value = "";
     ui.since.value = "";
+    ui.creator.value = "";
     ui.never.setAttribute("aria-pressed", "false");
     ctx.activeTypes.clear();
     ui.chips.forEach((chip) => chip.setAttribute("aria-pressed", "false"));
@@ -669,7 +1003,22 @@ html[data-sfx-theme] .sfx-table > thead > tr > th.sfx-sortable { cursor: pointer
         h(doc, "span", { class: "sfx-chip-count" }, String(n))
       )
     );
+    const creatorCounts = /* @__PURE__ */ new Map();
+    let unknown = 0;
+    ctx.rows.forEach((r) => {
+      if (r.creators.length === 0) unknown++;
+      r.creators.forEach((c) => creatorCounts.set(c.id, { name: c.name, n: ((creatorCounts.get(c.id) || {}).n || 0) + 1 }));
+    });
+    const creatorSelect = h(
+      doc,
+      "select",
+      { id: "sfx-creator-filter", "aria-label": "Filter by creator" },
+      h(doc, "option", { value: "" }, "All creators"),
+      ...Array.from(creatorCounts.entries()).sort((a, b) => a[1].name.localeCompare(b[1].name, void 0, { sensitivity: "base" })).map(([id, c]) => h(doc, "option", { value: id }, `${c.name} (${c.n})`)),
+      ...unknown > 0 ? [h(doc, "option", { value: "__none" }, `No known creator (${unknown})`)] : []
+    );
     const ui = {
+      creator: creatorSelect,
       search: h(doc, "input", { type: "search", id: "sfx-search", placeholder: "Filter by name (use -word to exclude)" }),
       never: h(doc, "button", { type: "button", id: "sfx-never-dl", class: "sfx-chip", "aria-pressed": "false" }, "Never downloaded"),
       min: h(doc, "input", { type: "number", id: "sfx-min-size", min: "0", step: "any", placeholder: "Min MB" }),
@@ -684,6 +1033,7 @@ html[data-sfx-theme] .sfx-table > thead > tr > th.sfx-sortable { cursor: pointer
         h(doc, "option", { value: "30d" }, "Last 30 days")
       ),
       invert: h(doc, "button", { type: "button", id: "sfx-invert", class: "btn btn-default btn-sm" }, "Invert selection"),
+      hashes: h(doc, "button", { type: "button", id: "sfx-export-hashes", class: "btn btn-default btn-sm", title: "Read the MD5 of each visible file from the server (no download) and save a JSON for the mods database" }, icon(doc, "download"), " Export hashes"),
       reset: h(doc, "button", { type: "button", id: "sfx-clear", class: "btn btn-default btn-sm" }, icon(doc, "clear"), " Reset filters"),
       count: h(doc, "span", { id: "sfx-visible-count", class: "sfx-count" }),
       chips
@@ -696,7 +1046,8 @@ html[data-sfx-theme] .sfx-table > thead > tr > th.sfx-sortable { cursor: pointer
       h(doc, "label", { class: "sfx-search" }, icon(doc, "search"), ui.search),
       h(doc, "div", { class: "sfx-group" }, ...chips, ui.never),
       h(doc, "div", { class: "sfx-group" }, h(doc, "span", { class: "sfx-label" }, "Size"), ui.min, ui.max, ui.since),
-      h(doc, "div", { class: "sfx-group" }, ui.invert, ui.reset),
+      h(doc, "div", { class: "sfx-group" }, ui.creator),
+      h(doc, "div", { class: "sfx-group" }, ui.invert, ui.hashes, ui.reset),
       ui.count
     );
     const anchor = doc.querySelector(".sfx-folders") || ctx.wrap;
@@ -720,6 +1071,20 @@ html[data-sfx-theme] .sfx-table > thead > tr > th.sfx-sortable { cursor: pointer
       applyFilters(ctx);
     });
     ui.reset.addEventListener("click", () => resetFilters(ctx));
+    ui.hashes.addEventListener("click", async () => {
+      if (ui.hashes.disabled) return;
+      const selected = ctx.rows.filter((r) => r.cb.checked && isVisibleRow(r));
+      const targets = selected.length > 0 ? selected : ctx.rows.filter(isVisibleRow);
+      const label = ui.hashes.lastChild;
+      ui.hashes.disabled = true;
+      const result = await collectHashes(ctx.win, targets, (done, total) => {
+        label.textContent = ` ${done}/${total}`;
+      });
+      downloadJson(ctx.win, doc, result.entries, "mods-export.json");
+      if (result.skipped.length > 0) ctx.win.console.warn(`Sim File Share Enhancer: ${result.skipped.length} files without a usable MD5`, result.skipped);
+      label.textContent = ` Export hashes`;
+      ui.hashes.disabled = false;
+    });
     ui.invert.addEventListener("click", () => {
       ctx.touched = true;
       ctx.rows.forEach((r) => {
@@ -854,6 +1219,185 @@ ${listed}${more}`;
     }
   }
 
+  // src/database.js
+  var REPO_RAW = "https://raw.githubusercontent.com/birb-labs/sim-file-share-enhancer/main/data/";
+  var CACHE_KEY = "sfx-db";
+  var CACHE_TTL_MS = 6 * 60 * 60 * 1e3;
+  var modsByName = /* @__PURE__ */ new Map();
+  function registerMods(list) {
+    modsByName.clear();
+    if (!Array.isArray(list)) return;
+    list.forEach((mod) => {
+      if (!mod || !mod.name) return;
+      const key = mod.name.toLowerCase();
+      const bucket = modsByName.get(key) || [];
+      bucket.push(mod);
+      modsByName.set(key, bucket);
+    });
+  }
+  function lookupMod(name, bytes) {
+    const bucket = modsByName.get(String(name).toLowerCase());
+    if (!bucket) return null;
+    if (bucket.length === 1 || bytes === null) return bucket[0];
+    const sized = bucket.filter((m) => Math.abs(m.size - bytes) <= Math.max(1024, m.size * 0.01));
+    return sized[0] || bucket[0];
+  }
+  function creatorsForFile(name, bytes) {
+    const mod = lookupMod(name, bytes);
+    if (mod && Array.isArray(mod.creators) && mod.creators.length > 0) {
+      const known = mod.creators.map((id) => CREATORS.find((c) => c.id === id)).filter(Boolean);
+      if (known.length > 0) return { mod, creators: known };
+    }
+    return { mod, creators: matchCreators(name) };
+  }
+  function applyCachedData(gm) {
+    let cached;
+    try {
+      cached = JSON.parse(gm.getValue(CACHE_KEY, "null"));
+    } catch {
+      return false;
+    }
+    if (!cached) return false;
+    registerCreators(cached.creators);
+    registerMods(cached.mods);
+    return true;
+  }
+  function fetchText(win, gm, url) {
+    if (gm.xhr) {
+      return new Promise((resolve, reject) => {
+        gm.xhr({
+          method: "GET",
+          url,
+          onload: (res) => res.status >= 200 && res.status < 300 ? resolve(res.responseText) : reject(new Error(String(res.status))),
+          onerror: () => reject(new Error("network")),
+          ontimeout: () => reject(new Error("timeout"))
+        });
+      });
+    }
+    return win.fetch(url).then((res) => {
+      if (!res.ok) throw new Error(String(res.status));
+      return res.text();
+    });
+  }
+  function refreshData(win, gm, now = Date.now()) {
+    let cached = null;
+    try {
+      cached = JSON.parse(gm.getValue(CACHE_KEY, "null"));
+    } catch {
+      cached = null;
+    }
+    if (cached && now - cached.at < CACHE_TTL_MS) return Promise.resolve(false);
+    return Promise.resolve().then(() => Promise.all([
+      fetchText(win, gm, `${REPO_RAW}creators.json`),
+      fetchText(win, gm, `${REPO_RAW}mods.json`)
+    ])).then(([creators, mods]) => {
+      gm.setValue(CACHE_KEY, JSON.stringify({ at: now, creators: JSON.parse(creators), mods: JSON.parse(mods) }));
+      return true;
+    }).catch(() => false);
+  }
+
+  // src/creator-popup.js
+  var POPUP_CSS = `
+html[data-sfx-theme] .sfx-popup-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.5);
+}
+html[data-sfx-theme] .sfx-popup {
+  width: min(420px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  padding: 18px;
+  border: 1px solid var(--sfx-border);
+  border-radius: var(--sfx-radius);
+  background: var(--sfx-surface);
+  color: var(--sfx-text);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+html[data-sfx-theme] .sfx-popup-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+html[data-sfx-theme] .sfx-popup-head img { width: 56px; height: 56px; border-radius: 10px; object-fit: cover; flex: none; }
+html[data-sfx-theme] .sfx-popup-title { flex: 1; min-width: 0; margin: 0; font-size: 18px; font-weight: 600; }
+html[data-sfx-theme] .sfx-popup-close { border: 0; background: none; color: var(--sfx-muted); cursor: pointer; font-size: 18px; }
+html[data-sfx-theme] .sfx-popup-links { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+html[data-sfx-theme] .sfx-popup-links a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--sfx-border);
+  border-radius: 8px;
+  color: var(--sfx-text);
+  text-decoration: none;
+}
+html[data-sfx-theme] .sfx-popup-links a:hover { border-color: var(--sfx-accent); color: var(--sfx-accent); }
+html[data-sfx-theme] .sfx-popup-kind { flex: none; min-width: 96px; color: var(--sfx-muted); font-size: 12px; text-transform: uppercase; }
+html[data-sfx-theme] .sfx-popup-url { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+html[data-sfx-theme] .sfx-popup-empty { margin: 0; color: var(--sfx-muted); }
+`;
+  var LABELS = {
+    patreon: "Patreon",
+    tumblr: "Tumblr",
+    site: "Website",
+    itch: "itch.io",
+    kofi: "Ko-fi",
+    musthavemods: "MustHaveMods",
+    other: "Other"
+  };
+  function sortedLinks(creator) {
+    const rank = (type) => {
+      const i = LINK_TYPES.indexOf(type);
+      return i < 0 ? LINK_TYPES.length : i;
+    };
+    return [...creator.links || []].sort((a, b) => rank(a.type) - rank(b.type));
+  }
+  function hostOf(url) {
+    try {
+      const u = new URL(url);
+      return (u.hostname.replace(/^www\./, "") + u.pathname).replace(/\/$/, "");
+    } catch {
+      return url;
+    }
+  }
+  function openCreatorPopup(doc, creator) {
+    closeCreatorPopup(doc);
+    const links = sortedLinks(creator);
+    const close = h(doc, "button", { type: "button", class: "sfx-popup-close", "aria-label": "Close" }, icon(doc, "clear"));
+    const head = h(doc, "div", { class: "sfx-popup-head" });
+    if (creator.image) head.append(h(doc, "img", { src: creator.image, alt: "", loading: "lazy", referrerpolicy: "no-referrer" }));
+    head.append(h(doc, "h2", { class: "sfx-popup-title", id: "sfx-popup-title" }, creator.name), close);
+    const body = links.length > 0 ? h(doc, "ul", { class: "sfx-popup-links" }, ...links.map((link) => h(doc, "li", {}, h(
+      doc,
+      "a",
+      { href: link.url, target: "_blank", rel: "noopener noreferrer", "data-type": link.type },
+      h(doc, "span", { class: "sfx-popup-kind" }, link.label || LABELS[link.type] || LABELS.other),
+      h(doc, "span", { class: "sfx-popup-url" }, hostOf(link.url)),
+      icon(doc, "link")
+    )))) : h(doc, "p", { class: "sfx-popup-empty" }, "No official links are known for this creator yet.");
+    const dialog = h(doc, "div", { class: "sfx-popup", role: "dialog", "aria-modal": "true", "aria-labelledby": "sfx-popup-title" }, head, body);
+    const backdrop = h(doc, "div", { id: "sfx-popup", class: "sfx-popup-backdrop" }, dialog);
+    backdrop.addEventListener("click", (e) => {
+      if (e.target === backdrop) closeCreatorPopup(doc);
+    });
+    close.addEventListener("click", () => closeCreatorPopup(doc));
+    doc.addEventListener("keydown", onKey);
+    doc.body.appendChild(backdrop);
+    close.focus();
+    return backdrop;
+  }
+  function onKey(e) {
+    if (e.key === "Escape") closeCreatorPopup(e.target.ownerDocument || e.target);
+  }
+  function closeCreatorPopup(doc) {
+    const open = doc.getElementById("sfx-popup");
+    doc.removeEventListener("keydown", onKey);
+    if (open) open.remove();
+  }
+
   // src/table.js
   var TABLE_CSS = `
 html[data-sfx-theme] .sfx-table-wrap { overflow: visible; border: 0; margin-bottom: 24px; }
@@ -895,7 +1439,7 @@ html[data-sfx-theme] .sfx-table [data-sfx-col="size"] { width: 88px; text-align:
 html[data-sfx-theme] .sfx-table [data-sfx-col="dls"],
 html[data-sfx-theme] .sfx-table [data-sfx-col="hearts"] { width: 56px; text-align: right; }
 html[data-sfx-theme] .sfx-table [data-sfx-col="added"],
-html[data-sfx-theme] .sfx-table [data-sfx-col="last"] { width: 176px; font-size: 12px; }
+html[data-sfx-theme] .sfx-table [data-sfx-col="last"] { width: 104px; font-size: 12px; white-space: normal; }
 html[data-sfx-theme] .sfx-table [data-sfx-col="actions"] { width: 104px; text-align: right; }
 html[data-sfx-theme] .sfx-table input[type="checkbox"] { width: 16px; height: 16px; margin: 0; cursor: pointer; }
 html[data-sfx-theme] .sfx-file { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -921,11 +1465,16 @@ html[data-sfx-theme] .sfx-packs {
 }
 html[data-sfx-theme] .sfx-creator {
   flex: 0 1 auto;
-  max-width: 40%;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: pointer;
 }
+html[data-sfx-theme] .sfx-table [data-sfx-col="creators"] { width: 150px; white-space: normal; }
+html[data-sfx-theme] .sfx-table [data-sfx-col="creators"] .sfx-creator { margin: 1px 4px 1px 0; }
+html[data-sfx-theme] .sfx-date, html[data-sfx-theme] .sfx-time { display: block; line-height: 1.3; }
+html[data-sfx-theme] .sfx-time { color: var(--sfx-muted); }
 html[data-sfx-theme] .sfx-creator,
 html[data-sfx-theme] .sfx-tag,
 html[data-sfx-theme] .sfx-meta,
@@ -974,7 +1523,8 @@ html[data-sfx-theme] .sfx-folder-chip:hover { border-color: var(--sfx-accent); c
 html[data-sfx-theme] .sfx-folder-kind { color: var(--sfx-muted); font-size: 11px; text-transform: uppercase; }
 `;
   function cellText(td) {
-    return td ? td.textContent.trim() : "";
+    if (!td) return "";
+    return td.dataset.sfxText || td.textContent.trim();
   }
   var ORIGINAL_COLUMNS = ["check", "file", "size", "dls", "hearts", "added", "last", "actions"];
   function cellOf(tr, key) {
@@ -995,6 +1545,10 @@ html[data-sfx-theme] .sfx-folder-kind { color: var(--sfx-muted); font-size: 11px
       type.dataset.sfxCol = "type";
       if (isHead) type.textContent = "Type";
       file.after(type);
+      const creators = doc.createElement(isHead ? "th" : "td");
+      creators.dataset.sfxCol = "creators";
+      if (isHead) creators.textContent = "Creators";
+      type.after(creators);
     });
   }
   function collectRows(doc) {
@@ -1010,6 +1564,9 @@ html[data-sfx-theme] .sfx-folder-kind { color: var(--sfx-muted); font-size: 11px
       const name = nameEl.textContent.trim();
       const ext = extOf(name);
       const info = parseName(name);
+      const bytes = parseSize(cellText(cellOf(tr, "size")));
+      const found = creatorsForFile(name, bytes);
+      const creators = found.creators;
       return {
         tr,
         cb,
@@ -1018,9 +1575,12 @@ html[data-sfx-theme] .sfx-folder-kind { color: var(--sfx-muted); font-size: 11px
         ext,
         type: typeOf(ext).id,
         title: info.title,
-        creator: info.creator ? info.creator.name : null,
+        creator: creators.length > 0 ? creators.map((c) => c.name).join(", ") : null,
+        creators,
+        creatorIds: creators.map((c) => c.id),
+        mod: found.mod,
         info,
-        bytes: parseSize(cellText(cellOf(tr, "size"))),
+        bytes,
         downloads: parseInt(cellText(cellOf(tr, "dls")), 10) || 0,
         hearts: parseInt(cellText(cellOf(tr, "hearts")), 10) || 0,
         added: parseDate(cellText(cellOf(tr, "added"))),
@@ -1094,15 +1654,7 @@ html[data-sfx-theme] .sfx-folder-kind { color: var(--sfx-muted); font-size: 11px
     link.textContent = info.title;
     link.title = row.name;
     const line = h(doc, "div", { class: "sfx-file-line" }, link);
-    if (info.creator) {
-      line.append(h(doc, "a", {
-        class: "sfx-creator",
-        href: info.creator.url,
-        target: "_blank",
-        rel: "noopener noreferrer",
-        title: `Creator: ${info.creator.name}`
-      }, info.creator.name));
-    } else if (info.tag) {
+    if (info.tag && row.creators.length === 0) {
       line.append(h(doc, "span", { class: "sfx-tag", title: "Tag from the filename, not a verified creator" }, info.tag));
     }
     if (info.version) line.append(h(doc, "span", { class: "sfx-meta" }, `v${info.version}`));
@@ -1114,7 +1666,32 @@ html[data-sfx-theme] .sfx-folder-kind { color: var(--sfx-muted); font-size: 11px
     }
     fileCell.textContent = "";
     fileCell.append(h(doc, "div", { class: "sfx-file" }, h(doc, "span", { class: "sfx-file-icon" }, icon(doc, type.icon)), main2));
+    const creatorCell = cellOf(row.tr, "creators");
+    row.creators.forEach((creator) => {
+      const chip = h(doc, "button", {
+        type: "button",
+        class: "sfx-creator",
+        "data-creator": creator.id,
+        title: `Official links: ${creator.name}`
+      }, creator.name);
+      chip.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openCreatorPopup(doc, creator);
+      });
+      creatorCell.append(chip);
+    });
+    ["added", "last"].forEach((key) => splitDate(doc, cellOf(row.tr, key)));
     cellOf(row.tr, "type").append(h(doc, "span", { class: "sfx-type", "data-type": type.id }, icon(doc, type.icon), type.label));
+  }
+  function splitDate(doc, td) {
+    if (!td) return;
+    const text = td.textContent.trim();
+    const cut = text.lastIndexOf(",");
+    td.title = text;
+    td.dataset.sfxText = text;
+    if (cut < 0) return;
+    td.textContent = "";
+    td.append(h(doc, "span", { class: "sfx-date" }, text.slice(0, cut)), h(doc, "span", { class: "sfx-time" }, text.slice(cut + 1).trim()));
   }
   function iconizeActions(doc, tr) {
     const cell = cellOf(tr, "actions");
@@ -1430,7 +2007,7 @@ html:not([data-sfx-ready]) body { visibility: hidden; }
 
   // src/index.js
   function main(win, doc, gm, opts = {}) {
-    const failsafe = win.setTimeout(() => markReady(doc), opts.failsafeMs === void 0 ? 3e3 : opts.failsafeMs);
+    const failsafe = win.setTimeout(() => markReady(doc), opts.failsafeMs === void 0 ? 3e4 : opts.failsafeMs);
     let theme;
     try {
       gm.addStyle(THEME_CSS);
@@ -1441,6 +2018,8 @@ html:not([data-sfx-ready]) body { visibility: hidden; }
       gm.addStyle(ICON_CSS);
       gm.addStyle(PAGEHEAD_CSS);
       gm.addStyle(COMPONENTS_CSS);
+      gm.addStyle(POPUP_CSS);
+      applyCachedData(gm);
       theme = initTheme(win, doc, gm);
       showLoading(doc);
     } catch (error) {
@@ -1461,6 +2040,7 @@ html:not([data-sfx-ready]) body { visibility: hidden; }
         win.clearTimeout(failsafe);
         markReady(doc);
       }
+      refreshData(win, gm);
     });
   }
   return __toCommonJS(index_exports);
@@ -1468,5 +2048,5 @@ html:not([data-sfx-ready]) body { visibility: hidden; }
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = __sfx;
 } else {
-  __sfx.main(window, document, { addStyle: GM_addStyle, getValue: GM_getValue, setValue: GM_setValue });
+  __sfx.main(window, document, { addStyle: GM_addStyle, getValue: GM_getValue, setValue: GM_setValue, xhr: GM_xmlhttpRequest });
 }

@@ -4,15 +4,19 @@ import { TOOLBAR_CSS } from './toolbar.js';
 import { ACTIONBAR_CSS, formatLinks } from './actionbar.js';
 import { PAGEHEAD_CSS, buildPageHead, groupChartButtons } from './pagehead.js';
 import { COMPONENTS_CSS } from './components.js';
+import { POPUP_CSS } from './creator-popup.js';
+import { applyCachedData, refreshData } from './database.js';
 import { onReady } from './dom.js';
 import { ICON_CSS, ICON_NAMES, icon } from './icons.js';
 import { LOADING_CSS, showLoading, markReady } from './loading.js';
 import { compareRows, extOf, matchesFilters, matchesQuery, parseDate, parseSize, rangeIndices } from './logic.js';
-import { CREATORS, PACK_CODES, matchCreator } from './creators.js';
+import { CREATORS, PACK_CODES, matchCreator, matchCreators, registerCreators } from './creators.js';
+import { registerMods, creatorsForFile } from './database.js';
+import { parseHead } from './hashes.js';
 import { parseName, typeOf } from './parse-name.js';
 
 function main(win, doc, gm, opts = {}) {
-  const failsafe = win.setTimeout(() => markReady(doc), opts.failsafeMs === undefined ? 3000 : opts.failsafeMs);
+  const failsafe = win.setTimeout(() => markReady(doc), opts.failsafeMs === undefined ? 30000 : opts.failsafeMs);
   let theme;
   try {
     gm.addStyle(THEME_CSS);
@@ -23,6 +27,8 @@ function main(win, doc, gm, opts = {}) {
     gm.addStyle(ICON_CSS);
     gm.addStyle(PAGEHEAD_CSS);
     gm.addStyle(COMPONENTS_CSS);
+    gm.addStyle(POPUP_CSS);
+    applyCachedData(gm);
     theme = initTheme(win, doc, gm);
     showLoading(doc);
   } catch (error) {
@@ -43,9 +49,11 @@ function main(win, doc, gm, opts = {}) {
       win.clearTimeout(failsafe);
       markReady(doc);
     }
+    refreshData(win, gm);
   });
 }
 
 export {
+  registerCreators, matchCreators, registerMods, creatorsForFile, parseHead, applyCachedData, refreshData,
   parseSize, parseDate, extOf, matchesQuery, matchesFilters, compareRows, rangeIndices, buildPageHead, CREATORS, PACK_CODES, matchCreator, parseName, typeOf, ICON_NAMES, icon, resolveTheme, formatLinks, collectRows, getSelected, setAllVisible, refreshSelectionState, enhanceFileTable, main,
 };

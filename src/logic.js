@@ -50,6 +50,10 @@ export function matchesQuery(name, query) {
 export function matchesFilters(row, f) {
   if (!matchesQuery(`${row.name} ${row.creator || ''}`, f.query)) return false;
   if (f.types.size > 0 && !f.types.has(row.type)) return false;
+  if (f.creator) {
+    const ids = row.creatorIds || [];
+    if (f.creator === '__none' ? ids.length > 0 : !ids.includes(f.creator)) return false;
+  }
   if (f.neverDownloaded && row.downloads !== 0) return false;
   if (f.minBytes !== null && (row.bytes === null || row.bytes < f.minBytes)) return false;
   if (f.maxBytes !== null && (row.bytes === null || row.bytes > f.maxBytes)) return false;
