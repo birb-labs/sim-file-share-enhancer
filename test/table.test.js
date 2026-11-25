@@ -38,6 +38,7 @@ test('clicking a row cell toggles its checkbox but links do not', async () => {
   t.click(cell);
   assert.equal(t.boxes()[2].checked, true);
   assert.ok(t.row(2).classList.contains('sfx-selected'));
+  t.doc.addEventListener('click', (e) => e.preventDefault());
   t.click(t.row(2).querySelector('a'));
   assert.equal(t.boxes()[2].checked, true);
 });
