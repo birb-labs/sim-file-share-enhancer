@@ -34,4 +34,30 @@ function fixture(name) {
   return fs.readFileSync(path.join(__dirname, 'fixtures', name), 'utf8');
 }
 
-module.exports = { gmStub, makeDom, ready, fixture };
+async function loadPage(html = fixture('my-files.html'), options) {
+  const L = require('../simfileshare-enhancer.user.js');
+  const dom = makeDom(html, options);
+  const gm = gmStub();
+  L.main(dom.window, dom.window.document, gm);
+  await ready(dom);
+  const doc = dom.window.document;
+  return {
+    dom,
+    doc,
+    win: dom.window,
+    gm,
+    boxes: () => Array.from(doc.querySelectorAll('input[name="selectedfiles"]')),
+    checked: () => doc.querySelectorAll('input[name="selectedfiles"]:checked').length,
+    visible: () => doc.querySelectorAll('#filelist tr:not([hidden])').length,
+    header: () => doc.querySelector('#sfx-select-all'),
+    row: (i) => doc.querySelectorAll('#filelist tr')[i],
+    click: (el, init = {}) =>
+      el.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true, cancelable: true, ...init })),
+    type: (el, value, eventName = 'input') => {
+      el.value = value;
+      el.dispatchEvent(new dom.window.Event(eventName, { bubbles: true }));
+    },
+  };
+}
+
+module.exports = { gmStub, makeDom, ready, fixture, loadPage };

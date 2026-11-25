@@ -1,25 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const L = require('../simfileshare-enhancer.user.js');
-const { gmStub, makeDom, ready, fixture } = require('./helpers.js');
+const { gmStub, makeDom, ready, fixture, loadPage } = require('./helpers.js');
 
-async function load(html = fixture('my-files.html')) {
-  const dom = makeDom(html);
-  L.main(dom.window, dom.window.document, gmStub());
-  await ready(dom);
-  const doc = dom.window.document;
-  return {
-    dom,
-    doc,
-    win: dom.window,
-    boxes: () => Array.from(doc.querySelectorAll('input[name="selectedfiles"]')),
-    checked: () => doc.querySelectorAll('input[name="selectedfiles"]:checked').length,
-    header: () => doc.querySelector('#sfx-select-all'),
-    row: (i) => doc.querySelectorAll('#filelist tr')[i],
-    click: (el, init = {}) =>
-      el.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true, cancelable: true, ...init })),
-  };
-}
+const load = loadPage;
 
 test('starts with nothing selected and emits a zero count', async () => {
   const counts = [];
