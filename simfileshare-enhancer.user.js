@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Sim File Share Enhancer
 // @namespace    https://simfileshare.net/
-// @version      2.0.0
+// @version      2.1.0
 // @description  Modern theme, filters, sorting and safe bulk selection for Sim File Share.
 // @author       p4tit0
 // @match        https://simfileshare.net/*

@@ -1,7 +1,7 @@
 {
   "name": "simfileshare-enhancer",
   "private": true,
-  "version": "2.0.0",
+  "version": "2.1.0",
   "scripts": {
     "test": "node --test test/",
     "e2e": "node e2e/run.js"
