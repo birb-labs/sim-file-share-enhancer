@@ -14,6 +14,7 @@
 
 'use strict';
 
+const FILE_BOX = 'input[type="checkbox"][name="selectedfiles"]';
 const SIZE_UNITS = { byte: 0, bytes: 0, kb: 1, mb: 2, gb: 3, tb: 4, pb: 5 };
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
@@ -321,6 +322,16 @@ html[data-sfx-theme] .sfx-ext {
   text-transform: uppercase;
   vertical-align: middle;
 }
+@media (max-width: 1199px) {
+  html[data-sfx-theme] .sfx-table th:nth-child(5), html[data-sfx-theme] .sfx-table td:nth-child(5) { display: none; }
+}
+@media (max-width: 991px) {
+  html[data-sfx-theme] .sfx-table th:nth-child(7), html[data-sfx-theme] .sfx-table td:nth-child(7) { display: none; }
+}
+@media (max-width: 767px) {
+  html[data-sfx-theme] .sfx-table-wrap { overflow-x: auto; }
+  html[data-sfx-theme] .sfx-table { min-width: 520px; }
+}
 html[data-sfx-theme] .sfx-folders { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
 html[data-sfx-theme] .sfx-folder-chip {
   display: inline-flex;
@@ -342,11 +353,12 @@ function cellText(td) {
 }
 
 function collectRows(doc) {
-  const first = doc.querySelector('input[name="selectedfiles"]');
-  if (!first) return [];
-  return Array.from(first.closest('table').querySelectorAll('tbody tr'))
+  const first = doc.querySelector(FILE_BOX);
+  const table = first && first.closest('table');
+  if (!table) return [];
+  return Array.from(table.querySelectorAll('tbody tr'))
     .map((tr) => {
-      const cb = tr.querySelector('input[name="selectedfiles"]');
+      const cb = tr.querySelector(FILE_BOX);
       if (!cb) return null;
       const cells = tr.children;
       const link = cells[1].querySelector('a');
@@ -400,11 +412,19 @@ function clearSelection(ctx) {
   refreshSelectionState(ctx);
 }
 
+function clearRestoredSelection(ctx) {
+  ctx.rows.forEach((r) => {
+    if (r.cb.checked && !r.cb.defaultChecked) r.cb.checked = false;
+  });
+  ctx.lastRow = null;
+  refreshSelectionState(ctx);
+}
+
 function moveFolderRowsToChips(doc, tbody, wrap) {
   const chips = [];
   Array.from(tbody.querySelectorAll('tr')).forEach((tr) => {
     const link = tr.querySelector('a');
-    if (tr.querySelector('input[name="selectedfiles"]') || !link) return;
+    if (tr.querySelector(FILE_BOX) || !link) return;
     const strong = tr.querySelector('strong');
     const chip = doc.createElement('a');
     chip.className = 'sfx-folder-chip';
@@ -441,10 +461,10 @@ function measureNavbar(doc) {
 }
 
 function enhanceFileTable(doc, win) {
-  const first = doc.querySelector('input[name="selectedfiles"]');
-  if (!first) return null;
-  const table = first.closest('table');
-  const tbody = first.closest('tbody');
+  const first = doc.querySelector(FILE_BOX);
+  const table = first && first.closest('table');
+  const tbody = first && first.closest('tbody');
+  if (!table || !tbody) return null;
   const wrap = table.closest('.table-responsive') || table;
   table.classList.add('sfx-table');
   wrap.classList.add('sfx-table-wrap');
@@ -494,15 +514,15 @@ function enhanceFileTable(doc, win) {
   });
 
   win.addEventListener('load', () => {
-    if (!ctx.touched) clearSelection(ctx);
+    if (!ctx.touched) clearRestoredSelection(ctx);
   });
   win.addEventListener('pageshow', (e) => {
-    if (e.persisted || !ctx.touched) clearSelection(ctx);
+    if (e.persisted || !ctx.touched) clearRestoredSelection(ctx);
   });
   buildToolbar(ctx);
   setupSorting(ctx);
   buildActionBar(ctx);
-  clearSelection(ctx);
+  clearRestoredSelection(ctx);
   return ctx;
 }
 
@@ -769,8 +789,12 @@ function buildActionBar(ctx) {
   });
   if (del) {
     del.addEventListener('click', (e) => {
-      const n = getSelected(ctx.rows).length;
-      if (!win.confirm(`Delete ${n} file${n === 1 ? '' : 's'}? This cannot be undone.`)) e.preventDefault();
+      const names = getSelected(ctx.rows).map((r) => r.name);
+      const n = names.length;
+      const listed = names.slice(0, 5).map((name) => `- ${name}`).join('\n');
+      const more = n > 5 ? `\nand ${n - 5} more` : '';
+      const message = `Delete ${n} file${n === 1 ? '' : 's'}? This cannot be undone.\n\n${listed}${more}`;
+      if (!win.confirm(message)) e.preventDefault();
     });
   }
 }

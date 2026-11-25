@@ -98,3 +98,18 @@ test('the singular confirmation reads naturally', async () => {
   bar(t).querySelector('input[name="deletefiles"]').click();
   assert.ok(asked[0].includes('1 file?'), asked[0]);
 });
+
+test('the delete confirmation lists the selected names and caps the list', async () => {
+  const t = await loadPage();
+  const asked = [];
+  t.win.confirm = (message) => (asked.push(message), false);
+  t.boxes()[0].click();
+  t.boxes()[1].click();
+  const names = [0, 1].map((i) => t.row(i).children[1].querySelector('a').textContent);
+  bar(t).querySelector('input[name="deletefiles"]').click();
+  names.forEach((n) => assert.ok(asked[0].includes(n), n));
+  t.header().click();
+  bar(t).querySelector('input[name="deletefiles"]').click();
+  assert.ok(asked[1].includes('and 28 more'), asked[1]);
+  assert.ok(asked[1].includes('Delete 33 files?'), asked[1]);
+});

@@ -52,17 +52,35 @@ test('shift-click selects the range between two clicks', async () => {
 });
 
 test('checkboxes restored by the browser are cleared on load and pageshow', async () => {
-  const html = fixture('my-files.html').replace(
-    /name="selectedfiles" value="(\d+)" \/>/g,
-    'name="selectedfiles" value="$1" checked />'
-  );
-  const t = await load(html);
+  const t = await load();
+  t.boxes().forEach((b) => (b.checked = true));
+  t.win.dispatchEvent(new t.win.Event('load'));
   assert.equal(t.checked(), 0);
   t.boxes()[4].checked = true;
   t.boxes()[5].checked = true;
   t.win.dispatchEvent(new t.win.Event('pageshow'));
   assert.equal(t.checked(), 0);
   assert.equal(t.header().checked, false);
+});
+
+test('rows the server rendered as checked stay selected', async () => {
+  const html = `<html><body><div class="navbar"><ul class="nav navbar-nav navbar-right"></ul></div>
+<form method="post" action="/accounts/processmultiple/"><div class="table-responsive"><table class="table">
+<thead><tr><th>&nbsp;</th><th>Filename</th><th>Size</th><th>DLs</th><th>H</th><th>Added</th><th>Last</th><th>Actions</th></tr></thead>
+<tbody id="filelist">
+<tr><td><input type="checkbox" name="selectedfiles" value="1" checked /></td><td><a href="/filedetails/1/">a.package</a></td><td>1 kB</td><td>0</td><td>0</td><td>Nov. 25, 2026, noon</td><td></td><td></td></tr>
+<tr><td><input type="checkbox" name="selectedfiles" value="2" checked /></td><td><a href="/filedetails/2/">b.package</a></td><td>1 kB</td><td>0</td><td>0</td><td>Nov. 25, 2026, noon</td><td></td><td></td></tr>
+</tbody></table></div>
+<input type="submit" name="deletefiles" value="Delete" /></form></body></html>`;
+  const t = await load(html);
+  assert.equal(t.checked(), 2);
+  assert.equal(t.doc.querySelector('#sfx-actionbar').hidden, false);
+  assert.equal(t.doc.querySelector('.sfx-selected-count').textContent, '2 selected');
+});
+
+test('hidden selectedfiles inputs outside any table are ignored without throwing', () => {
+  const dom = makeDom('<html><body><form><input type="hidden" name="selectedfiles" value="1" /></form></body></html>');
+  assert.equal(L.enhanceFileTable(dom.window.document, dom.window), null);
 });
 
 test('subfolder rows become chips and leave the table body', async () => {
