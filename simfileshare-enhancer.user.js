@@ -816,14 +816,14 @@ const CREATORS = [
     source: 'https://turbodriver.itch.io/wickedwhims', patterns: [/^TURBODRIVER_/i] },
   { id: 'lot51', name: 'Lot 51', url: 'https://lot51.cc',
     source: 'https://lot51.cc/core', patterns: [/^lot51_/i] },
-  { id: 'scumbumbo', name: 'Scumbumbo', url: 'https://scumbumbomods.com',
+  { id: 'scumbumbo', keepName: true, name: 'Scumbumbo', url: 'https://scumbumbomods.com',
     source: 'https://scumbumbomods.com/xml-injector', patterns: [/^Scumbumbo_/i, /^XmlInjector_/i] },
-  { id: 'uicheats', name: 'UI Cheats Extension (weerbesu)', url: 'https://direct.modthesims.info/d/558548',
+  { id: 'uicheats', keepName: true, name: 'UI Cheats Extension (weerbesu)', url: 'https://direct.modthesims.info/d/558548',
     source: 'https://direct.modthesims.info/d/558548', patterns: [/^UI_Cheats_Extension/i] },
   { id: 'plumbbuddy', name: 'PlumbBuddy (CodeBleu)', url: 'https://codebleu.itch.io',
     source: 'https://forums.ea.com/discussions/the-sims-franchise-discussion-en/free-mod-manager-for-all-four-sims-games-early-version-feedback-welcome/13579279',
     patterns: [/^PlumbBuddy_/i] },
-  { id: 'basemental', name: 'Basemental', url: 'https://basementalcc.com',
+  { id: 'basemental', keepName: true, name: 'Basemental', url: 'https://basementalcc.com',
     source: 'https://kotaku.com/modder-makes-6-000-a-month-adding-drugs-to-the-sims-4-1823044123',
     patterns: [/^Basemental /i, /^basementaldrugs/i] },
   { id: 'littlbowbub', name: 'Littlbowbub', url: 'https://musthavemods.com/creator/littlbowbub/',
@@ -865,6 +865,76 @@ function matchCreator(filename) {
   const base = stripOrderMarkers(filename);
   const hit = CREATORS.find((c) => c.patterns.some((p) => p.test(base)));
   return hit ? { id: hit.id, name: hit.name, url: hit.url } : null;
+}
+
+const FLAG_PHRASES = ['required if pack owned', 'optional', 'required', 'needed'];
+const FLAG_TOKENS = { OPTIONAL: 'optional', NEEDED: 'needed', REQUIRED: 'required' };
+const PACK_TOKEN = /^(?:EP|GP|SP)\d{2}$/i;
+
+const FILE_TYPES = {
+  package: { id: 'package', label: 'Package', icon: 'package' },
+  ts4script: { id: 'script', label: 'Script', icon: 'script' },
+  log: { id: 'log', label: 'Log', icon: 'log' },
+  cfg: { id: 'config', label: 'Config', icon: 'config' },
+};
+const OTHER_TYPE = { id: 'other', label: 'Other', icon: 'file' };
+
+function typeOf(ext) {
+  return FILE_TYPES[ext] || OTHER_TYPE;
+}
+
+function parseName(name) {
+  const ext = extOf(name);
+  const base = ext === '(none)' ? name : name.slice(0, name.lastIndexOf('.'));
+  let rest = stripOrderMarkers(base);
+  const loadOrder = rest !== base;
+  const creator = matchCreator(name);
+  const definition = creator ? CREATORS.find((c) => c.id === creator.id) : null;
+  let tag = null;
+
+  const bracket = /^\[([^\]]+)\][-_ ]*/.exec(rest);
+  if (bracket) {
+    if (!creator) tag = bracket[1];
+    rest = rest.slice(bracket[0].length);
+  } else if (creator && !definition.keepName) {
+    const prefix = /^[^_ ]+[_ ]/.exec(rest);
+    if (prefix) rest = rest.slice(prefix[0].length);
+  }
+
+  const flags = [];
+  rest = rest.replace(/\(([^)]*)\)/g, (whole, inner) => {
+    const phrase = inner.trim().toLowerCase();
+    if (!FLAG_PHRASES.includes(phrase)) return whole;
+    flags.push(phrase);
+    return ' ';
+  });
+  rest = rest.replace(/(^|[_\s])(OPTIONAL|NEEDED|REQUIRED)(?=$|[_\s])/g, (whole, lead, token) => {
+    flags.push(FLAG_TOKENS[token]);
+    return lead;
+  });
+  rest = rest.replace(/(^|[\s_])-mod-(?=$|[\s_])/gi, '$1');
+
+  let version = null;
+  rest = rest.replace(/(^|[\s_-])([vV])(\d+(?:\.\d+)*)(?=$|[\s_-])/, (whole, lead, letter, number) => {
+    if (letter === 'V' && !number.includes('.')) return whole;
+    version = number;
+    return lead;
+  });
+
+  const packs = [];
+  rest.split(/[\s_\-()[\].,]+/).forEach((token) => {
+    const code = token.toUpperCase();
+    if ((PACK_TOKEN.test(token) || PACK_CODES[code] !== undefined) && !packs.includes(code)) packs.push(code);
+  });
+
+  const title = rest
+    .replace(/_/g, ' ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+    .replace(/\s+/g, ' ')
+    .replace(/^[\s_-]+|[\s_-]+$/g, '');
+
+  return { creator, tag, title: title || name, version, flags, packs, loadOrder };
 }
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -976,7 +1046,7 @@ function main(win, doc, gm, opts = {}) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     parseSize, parseDate, extOf, matchesQuery, matchesFilters, compareRows, rangeIndices,
-    CREATORS, PACK_CODES, matchCreator, ICON_NAMES, icon, resolveTheme, formatLinks, collectRows, getSelected, setAllVisible, refreshSelectionState, enhanceFileTable, main,
+    CREATORS, PACK_CODES, matchCreator, parseName, typeOf, ICON_NAMES, icon, resolveTheme, formatLinks, collectRows, getSelected, setAllVisible, refreshSelectionState, enhanceFileTable, main,
   };
 } else {
   main(window, document, { addStyle: GM_addStyle, getValue: GM_getValue, setValue: GM_setValue });
