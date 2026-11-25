@@ -7,6 +7,7 @@ const SELECTORS = [
   '.list-group-item', '.table-hover', '.dropdown-menu', '.modal-content', '.nav-tabs',
   '.label', '.badge', '.breadcrumb', '.pagination', '.help-block',
   '.alert-success', '.alert-danger', '.alert-info', 'pre', 'code', 'blockquote', 'details',
+  '.btn-info', '.text-primary', '.text-info', 'input[type="email"]', '.table > tbody > tr > th', 'code a',
 ];
 
 async function css() {
@@ -56,4 +57,23 @@ test('the accordion chevron is an svg mask, never a text character', async () =>
 test('stylesheet text stays plain ASCII', async () => {
   const text = await css();
   assert.ok(!/[^\x09\x0a\x20-\x7e]/.test(text));
+});
+
+test('the chart credit stays visible and the chart is spaced from the dropzone', async () => {
+  const text = await css();
+  assert.ok(!/\.highcharts-credits[^}]*display:\s*none/.test(text));
+  assert.ok(/#highchart[^}]*margin-bottom:\s*12px/.test(text));
+});
+
+test('date columns are wide enough for the full timestamp', async () => {
+  const text = await css();
+  assert.ok(/\[data-sfx-col="added"\],[^{]*\[data-sfx-col="last"\]\s*\{[^}]*width:\s*176px/.test(text));
+});
+
+test('toolbar inputs are readable: no spinner overlap, normal weight, chip gaps', async () => {
+  const text = await css();
+  assert.ok(/input\[type="number"\][^}]*width:\s*104px/.test(text));
+  assert.ok(text.includes('::-webkit-inner-spin-button') && text.includes('-moz-appearance: textfield'));
+  assert.ok(/\.sfx-search input\[type="search"\][^}]*font-weight:\s*400/.test(text));
+  assert.ok(/\.sfx-chip\s*\{[^}]*display:\s*inline-flex[^}]*gap:\s*6px/.test(text));
 });
